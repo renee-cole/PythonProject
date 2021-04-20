@@ -1,9 +1,6 @@
 # the goal is to determine the average wait time for people getting their COVID-19 Vaccines at UT Austin
 
 # Things to be done...
-# RENEE
-# - Clean up function variables
-
 # - Add supply-demand curve for orders
 # - Add ordering process
 # - Add financial elements
@@ -12,435 +9,459 @@ import simpy
 import random
 import numpy as np
 
-NUM_WORKERS = 25
-NUM_MACHINES1 = 100
-NUM_MACHINES2 = 50
-
-NUM_PACKAGING = 10
-packagetime = 5
-DISPATCH_CAPACITY_C = 500 #these should change based on supply demand
-DISPATCH_CAPACITY_F = 500
-
-
-F_ORDER_INTER = 3
-F_INIT_NUM_ORDER = 10
-C_ORDER_INTER = 3
-C_INIT_NUM_ORDER = 10
-
+# WORK DAY INFORMATION--------------------------------------------------------------------------------------------------
 work_days = 7
 work_hours = 8
-SIM_TIME = work_days*work_hours*1000 # 1 work week
-C_TIME_LIST = []
-F_TIME_LIST = []
+SIM_TIME = work_days*work_hours*52 # year
 
-C1TIME = 5
-C2TIME = 5
-C3TIME = 5
-Ctime = 10
+# RESOURCES-------------------------------------------------------------------------------------------------------------
+# Resources: resources: three different machines and generic technicians------------------------------------------------
+num_workers = 25
+num_machines1 = 100
+num_machines2 = 50
+num_packaging_machines = 10
 
-INITC1 = 500
-INITC2 = 500
-INITC3 = 400
-INITC4 = 400
+# Resources: containers-------------------------------------------------------------------------------------------------
+# Ingredient and their inital amounts and their raw store capacities----------------------------------------------------
+initial_ingredient1 = 500
+initial_ingredient2 = 500
+initial_ingredient3 = 400
+initial_ingredient4 = 400
+initial_ingredient5 = 1000
+initial_ingredient6 = 500
+initial_ingredient7 = 500
+initial_ingredient8 = 500
+initial_ingredient9 = 50000
+initial_ingredient10 = 50000
 
-C1_process1 = 50
-C2_process2 = 40
-C3_process3 = 30
-F1_process1 = 50
-F2_process2 = 40
-F3_process3 = 30
+ingredient1_capacity = 1000
+ingredient2_capacity = 1000
+ingredient3_capacity = 1000
+ingredient4_capacity = 1000
+ingredient5_capacity = 1000
+ingredient6_capacity = 1000
+ingredient7_capacity = 1000
+ingredient8_capacity = 1000
+ingredient9_capacity = 60000
+ingredient10_capacity = 60000
 
-C1_CAPACITY = 1000
-C2_CAPACITY = 1000
-C3_CAPACITY = 1000
-C4_CAPACITY = 1000
-POST_C1_CAPACITY = 500
-POST_C2_CAPACITY = 500
-POST_C3_CAPACITY = 500
-COVID_VACCINE_CAPACITY = 1000
+# INGREDIENTS & STORES--------------------------------------------------------------------------------------------------
+# Ingredients post-processing (pocesses 1-3) store capacities-----------------------------------------------------------
+COVID_postProcess1_capacity = 500
+COVID_postProcess2_capacity = 500
+COVID_postProcess3_capacity = 500
+COVID_postAssembly_capacity = 1000
+COVID_dispatch_capacity = 500
 
-F1time = 5
-F2time = 5
-F3time = 5
-Ftime = 15
-CF1time = 20
-CF2time = 30
+FLU_postProcess1_capacity = 500
+FLU_postProcess2_capacity = 500
+FLU_postProcess3_capacity = 500
+FLU_postAssembly_capacity = 1000
+FLU_dispatch_capacity = 500
 
-INITF1 = 1000
-INITF2 = 500
-INITF3 = 500
-INITF4 = 500
+# Ingredients used in each initial process raw ingredients (these are used to determine reordering of stock)------------
+# COVID process 1 uses ingredient 1
+ingredient1_in_COVIDprocess1 = 50
+# COVID process 2 uses ingredient 2
+ingredient2_in_COVIDprocess2 = 40
+# COVID process 3 uses ingredient 3 & ingredient 9
+ingredient3_in_COVIDprocess3 = 30
+ingredient9_in_COVIDprocess3 = 50
 
-CF1_process = 50
-CF2_process = 40
+# FLU process 1 uses ingredient 4
+ingredient4_in_FLUprocess1 = 50
+# FLU process 2 uses ingredient 5
+ingredient5_in_FLUprocess2 = 40
+# FLU process 3 uses ingredient 6 & ingredient 9
+ingredient5_in_FLUprocess3 = 30
+ingredient9_in_FLUprocess3 = 40
 
-C1_critical_stock = 3*(C1_process1)*C1TIME/work_hours
-C2_critical_stock = 3*(C2_process2)*C2TIME/work_hours
-C3_critical_stock = 3*(C3_process3)*C3TIME/work_hours
-F1_critical_stock = 3*(F1_process1)*F1time/work_hours
-F2_critical_stock = 3*(F2_process2)*F2time/work_hours
-F3_critical_stock = 3*(F3_process3)*F3time/work_hours
-CF1_critical_stock = 3*(CF1_process)*CF1time/work_hours
-CF2_critical_stock = 3*(CF2_process)*CF2time/work_hours
+# Packaging is the same for COVID and FLU
+ingredient10_in_packaging = 40
 
-F1_CAPACITY = 1000
-F2_CAPACITY = 1000
-F3_CAPACITY = 1000
-F4_CAPACITY = 1000
-POST_F1_CAPACITY = 500
-POST_F2_CAPACITY = 500
-POST_F3_CAPACITY = 500
-FLU_VACCINE_CAPACITY = 1000
+# PROCESSES-------------------------------------------------------------------------------------------------------------
+COVID_process1_time = 5
+COVID_process2_time = 5
+COVID_process3_time = 5
+COVID_assembly_time = 10
+COVID_dispatch_capacity = 500 #these should change based on supply demand curves
+FLU_process1_time = 5
+FLU_process2_time = 5
+FLU_process3_time = 5
+FLU_assembly_time = 15
+Package_time = 5
+FLU_dispatch_capacity = 500
 
-CF1_CAPACITY = 60000
-CF2_CAPACITY = 60000
-INITCF1 = 50000
-INITCF2 = 50000
+# STOCK ORDERING--------------------------------------------------------------------------------------------------------
+C1_critical_stock = 3 * (ingredient1_in_COVIDprocess1) * COVID_process1_time / work_hours
+C2_critical_stock = 3 * (ingredient2_in_COVIDprocess2) * COVID_process2_time / work_hours
+C3_critical_stock = 3 * (ingredient3_in_COVIDprocess3) * COVID_process3_time / work_hours
+F1_critical_stock = 3 * (ingredient4_in_FLUprocess1) * FLU_process1_time / work_hours
+F2_critical_stock = 3 * (ingredient5_in_FLUprocess2) * FLU_process2_time / work_hours
+F3_critical_stock = 3 * (ingredient5_in_FLUprocess3) * FLU_process3_time / work_hours
+CF1_critical_stock = 3 * (ingredient9_in_COVIDprocess3) * (COVID_process3_time + FLU_process3_time) / work_hours
+CF2_critical_stock = 3 * (ingredient10_in_packaging) * Package_time / work_hours
+
+# DEMAND----------------------------------------------------------------------------------------------------------------
+COVID_order_interval = 3
+COVID_initial_order_numbers = 10
+FLU_order_interval = 3
+FLU_initial_order_numbers = 10
+
+# START SIMULATION------------------------------------------------------------------------------------------------------
+COVID_time_list = []
+FLU_time_list = []
 
 class vaccineFacility(object):
-    def __init__(self, env, num_workers, num_machines1, num_machines2, C1time, C2time, C3time):
+    def __init__(self, env):
+        # Initialize everything lol
         self.worker = simpy.Resource(env, num_workers)
         self.machine1 = simpy.Resource(env, num_machines1)
         self.machine2 = simpy.Resource(env, num_machines2)
-        self.packaging_machine = simpy.Resource(env, NUM_PACKAGING)
+        self.packaging_machine = simpy.Resource(env, num_packaging_machines)
         self.env = env
-        
-        self.processC1_time = C1time
-        self.processC2_time = C2time
-        self.processC3_time = C3time
-        self.processC_time = Ctime
-        self.C1 = simpy.Container(env, capacity = C1_CAPACITY, init = INITC1)
-        self.C2 = simpy.Container(env, capacity = C2_CAPACITY, init = INITC2)
-        self.C3 = simpy.Container(env, capacity = C3_CAPACITY, init = INITC3)
-        self.C4 = simpy.Container(env, capacity = C4_CAPACITY, init = INITC4)
-        self.C1_control = env.process(self.C1_stock_control(env))
-        self.C2_control = env.process(self.C2_stock_control(env))
-        self.C3_control = env.process(self.C3_stock_control(env))
-        self.postC1 = simpy.Container(env, capacity = POST_C1_CAPACITY, init = 0)
-        self.postC2 = simpy.Container(env, capacity = POST_C2_CAPACITY, init = 0)
-        self.postC3 = simpy.Container(env, capacity = POST_C3_CAPACITY, init = 0)
-        self.postC = simpy.Container(env, capacity = COVID_VACCINE_CAPACITY, init = 0)
-        
-        self.processF1_time = F1time
-        self.processF2_time = F2time
-        self.processF3_time = F3time
-        self.processF_time = Ftime
-        self.F1 = simpy.Container(env, capacity = F1_CAPACITY, init = INITF1)
-        self.F2 = simpy.Container(env, capacity = F2_CAPACITY, init = INITF2)
-        self.F3 = simpy.Container(env, capacity = F3_CAPACITY, init = INITF3)
-        self.F4 = simpy.Container(env, capacity = F4_CAPACITY, init = INITF4)
-        self.F1_control = env.process(self.F1_stock_control(env))
-        self.F2_control = env.process(self.F2_stock_control(env))
-        self.F3_control = env.process(self.F3_stock_control(env))
-        self.postF1 = simpy.Container(env, capacity = POST_F1_CAPACITY, init = 0)
-        self.postF2 = simpy.Container(env, capacity = POST_F2_CAPACITY, init = 0)
-        self.postF3 = simpy.Container(env, capacity = POST_F3_CAPACITY, init = 0)
-        self.postF = simpy.Container(env, capacity = FLU_VACCINE_CAPACITY, init = 0)
-        
-        self.CF1 = simpy.Container(env, capacity = CF1_CAPACITY, init = INITCF1)
-        self.CF2 = simpy.Container(env, capacity = CF2_CAPACITY, init = INITCF2)
-        self.CF1_control = env.process(self.CF1_stock_control(env))
-        self.CF2_control = env.process(self.CF2_stock_control(env))
-        
-        self.package_time = packagetime
-        self.dispatchC = simpy.Container(env, capacity = DISPATCH_CAPACITY_C, init = 0)
-        self.dispatchF = simpy.Container(env, capacity = DISPATCH_CAPACITY_F, init = 0)
 
-    def C_process1(self):
-        yield self.C1.get(C1_process1)
-        yield self.postC1.put(50)
-        yield self.env.timeout(random.randint(self.processC1_time - 1, self.processC1_time + 1))
+        self.Ingredient1 = simpy.Container(env, capacity = ingredient1_capacity, init = initial_ingredient1)
+        self.Ingredient2 = simpy.Container(env, capacity = ingredient2_capacity, init = initial_ingredient2)
+        self.Ingredient3 = simpy.Container(env, capacity = ingredient3_capacity, init = initial_ingredient3)
+        self.Ingredient4 = simpy.Container(env, capacity = ingredient4_capacity, init = initial_ingredient4)
+        self.Ingredient5 = simpy.Container(env, capacity = ingredient5_capacity, init = initial_ingredient5)
+        self.Ingredient6 = simpy.Container(env, capacity = ingredient6_capacity, init = initial_ingredient6)
+        self.Ingredient7 = simpy.Container(env, capacity = ingredient7_capacity, init = initial_ingredient7)
+        self.Ingredient8 = simpy.Container(env, capacity = ingredient8_capacity, init = initial_ingredient8)
+        self.Ingredient9 = simpy.Container(env, capacity = ingredient9_capacity, init = initial_ingredient9)
+        self.Ingredient10 = simpy.Container(env, capacity = ingredient10_capacity, init = initial_ingredient10)
 
-    def C_process2(self):
-        yield self.C2.get(C2_process2)
-        yield self.postC2.put(1)
-        yield self.env.timeout(random.randint(self.processC2_time - 1, self.processC2_time + 1 ))
+        self.ingredient1_stock_control = env.process(self.I1_stock_control(env))
+        self.ingredient2_stock_control = env.process(self.I2_stock_control(env))
+        self.ingredient3_stock_control = env.process(self.I3_stock_control(env))
+        self.ingredient5_stock_control = env.process(self.I5_stock_control(env))
+        self.ingredient6_stock_control = env.process(self.I6_stock_control(env))
+        self.ingredient7_stock_control = env.process(self.I7_stock_control(env))
+        self.ingredient9_stock_control = env.process(self.I9_stock_control(env))
+        self.ingredient10_stock_control = env.process(self.I10_stock_control(env))
 
-    def C_process3(self):
-        yield self.C3.get(C3_process3)
-        yield self.CF1.get(CF1_process)
-        yield self.postC3.put(20)
-        yield self.env.timeout(random.randint(self.processC3_time - 1, self.processC3_time + 1))
+        self.COVID_postProcess1_capacity = simpy.Container(env, capacity = COVID_postProcess1_capacity, init = 0)
+        self.COVID_postProcess2_capacity = simpy.Container(env, capacity = COVID_postProcess2_capacity, init = 0)
+        self.COVID_postProcess3_capacity = simpy.Container(env, capacity = COVID_postProcess3_capacity, init = 0)
+        self.COVID_postAssembly_capacity = simpy.Container(env, capacity = COVID_postAssembly_capacity, init = 0)
+
+        self.FLU_postProcess1_capacity = simpy.Container(env, capacity=FLU_postProcess1_capacity, init=0)
+        self.FLU_postProcess2_capacity = simpy.Container(env, capacity=FLU_postProcess2_capacity, init=0)
+        self.FLU_postProcess3_capacity = simpy.Container(env, capacity=FLU_postProcess3_capacity, init=0)
+        self.FLU_postAssembly_capacity = simpy.Container(env, capacity=FLU_postAssembly_capacity, init=0)
+        self.COVID_dispatch = simpy.Container(env, capacity = COVID_dispatch_capacity, init = 0)
+        self.FLU_dispatch = simpy.Container(env, capacity = FLU_dispatch_capacity, init = 0)
+
+        self.COVID_process1_time = COVID_process1_time
+        self.COVID_process2_time = COVID_process2_time
+        self.COVID_process3_time = COVID_process3_time
+        self.COVID_assembly_time = COVID_assembly_time
+        self.FLU_process1_time = FLU_process1_time
+        self.FLU_process2_time = FLU_process2_time
+        self.FLU_process3_time = FLU_process3_time
+        self.FLU_assembly_time = FLU_assembly_time
+        self.package_time = Package_time
+
+    # Define each process-----------------------------------------------------------------------------------------------
+    def COVID_process1(self):
+        yield self.Ingredient1.get(ingredient1_in_COVIDprocess1)
+        yield self.COVID_postProcess1_capacity.put(50)
+        yield self.env.timeout(random.randint(self.COVID_process1_time - 1, self.COVID_process1_time + 1))
+
+    def COVID_process2(self):
+        yield self.Ingredient2.get(ingredient2_in_COVIDprocess2)
+        yield self.COVID_postProcess2_capacity.put(1)
+        yield self.env.timeout(random.randint(self.COVID_process2_time - 1, self.COVID_process2_time + 1))
+
+    def COVID_process3(self):
+        yield self.Ingredient3.get(ingredient3_in_COVIDprocess3)
+        yield self.Ingredient9.get(ingredient9_in_COVIDprocess3)
+        yield self.COVID_postProcess3_capacity.put(20)
+        yield self.env.timeout(random.randint(self.COVID_process3_time - 1, self.COVID_process3_time + 1))
         
-    def C_process_final(self):
-        yield self.postC1.get(5)
-        yield self.postC2.get(5)
-        yield self.postC3.get(5)
-        yield self.postC.put(10)
-        yield self.env.timeout(random.randint(self.processC_time - 1, self.processC_time + 1))
+    def COVID_process_assembly(self):
+        yield self.COVID_postProcess1_capacity.get(5)
+        yield self.COVID_postProcess2_capacity.get(5)
+        yield self.COVID_postProcess3_capacity.get(5)
+        yield self.COVID_postAssembly_capacity.put(10)
+        yield self.env.timeout(random.randint(self.COVID_assembly_time - 1, self.COVID_assembly_time + 1))
         
-    def F_process1(self):
-        yield self.F1.get(F1_process1)
-        yield self.postF1.put(50)
-        yield self.env.timeout(random.randint(self.processF1_time - 1, self.processF1_time + 1))
+    def FLU_process1(self):
+        yield self.Ingredient5.get(ingredient4_in_FLUprocess1)
+        yield self.FLU_postProcess1_capacity.put(50)
+        yield self.env.timeout(random.randint(self.FLU_process1_time - 1, self.FLU_process1_time + 1))
 
-    def F_process2(self):
-        yield self.F2.get(F2_process2)
-        yield self.postF2.put(1)
-        yield self.env.timeout(random.randint(self.processF2_time - 1, self.processF2_time + 1 ))
+    def FLU_process2(self):
+        yield self.Ingredient6.get(ingredient5_in_FLUprocess2)
+        yield self.FLU_postProcess2_capacity.put(1)
+        yield self.env.timeout(random.randint(self.FLU_process2_time - 1, self.FLU_process2_time + 1))
 
-    def F_process3(self):
-        yield self.F3.get(F3_process3)
-        yield self.CF1.get(CF1_process)
-        yield self.postF3.put(20)
-        yield self.env.timeout(random.randint(self.processF3_time - 1, self.processF3_time + 1))
+    def FLU_process3(self):
+        yield self.Ingredient7.get(ingredient5_in_FLUprocess3)
+        yield self.Ingredient9.get(ingredient9_in_FLUprocess3)
+        yield self.FLU_postProcess3_capacity.put(20)
+        yield self.env.timeout(random.randint(self.FLU_process3_time - 1, self.FLU_process3_time + 1))
         
-    def F_process_final(self):
-        yield self.postF1.get(5)
-        yield self.postF2.get(5)
-        yield self.postF3.get(5)
-        yield self.postF.put(10)
-        yield self.env.timeout(random.randint(self.processF_time - 1, self.processF_time + 1))
+    def FLU_process_assembly(self):
+        yield self.FLU_postProcess1_capacity.get(5)
+        yield self.FLU_postProcess2_capacity.get(5)
+        yield self.FLU_postProcess3_capacity.get(5)
+        yield self.FLU_postAssembly_capacity.put(10)
+        yield self.env.timeout(random.randint(self.FLU_assembly_time - 1, self.FLU_assembly_time + 1))
         
     def packaging(self, C = True):
         if C is True:
-            yield self.postC.get(1)
-            yield self.dispatchC.put(1)
+            yield self.COVID_postAssembly_capacity.get(1)
+            yield self.COVID_dispatch.put(1)
         else:
-            yield self.postF.get(1)
-            yield self.dispatchF.put(1)
-        yield self.CF2.get(1)
+            yield self.FLU_postAssembly_capacity.get(1)
+            yield self.FLU_dispatch.put(1)
+        yield self.Ingredient10.get(1)
         yield self.env.timeout(random.randint(self.package_time - 1, self.package_time + 1))
 
-    def C1_stock_control(self, env):
+    # Define stock control----------------------------------------------------------------------------------------------
+    def I1_stock_control(self, env):
         yield env.timeout(0)
         while True:
-            if self.C1.level <= C1_critical_stock:
+            if self.Ingredient1.level <= C1_critical_stock:
                 print('Ingredient C1 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
-                    self.C1.level, int(env.now/8), env.now % 8))
+                    self.Ingredient1.level, int(env.now / 8), env.now % 8))
                 print('calling C1 supplier')
                 print('----------------------------------')
                 yield env.timeout(16)
                 print('C1 supplier arrives at day {0}, hour {1}'.format(
                     int(env.now/8), env.now % 8))
-                yield self.C1.put(300)
+                yield self.Ingredient1.put(300)
                 print('new ingredient stock is {0}'.format(
-                    self.C1.level))
+                    self.Ingredient1.level))
                 print('----------------------------------')
                 yield env.timeout(8)
             else:
                 yield env.timeout(1)
                 
-    def C2_stock_control(self, env):
+    def I2_stock_control(self, env):
         yield env.timeout(0)
         while True:
-            if self.C2.level <= C2_critical_stock:
+            if self.Ingredient2.level <= C2_critical_stock:
                 print('Ingredient C2 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
-                    self.C2.level, int(env.now/8), env.now % 8))
+                    self.Ingredient2.level, int(env.now / 8), env.now % 8))
                 print('calling C2 supplier')
                 print('----------------------------------')
                 yield env.timeout(16)
                 print('C2 supplier arrives at day {0}, hour {1}'.format(
                     int(env.now/8), env.now % 8))
-                yield self.C2.put(300)
+                yield self.Ingredient2.put(300)
                 print('new ingredient stock is {0}'.format(
-                    self.C2.level))
+                    self.Ingredient2.level))
                 print('----------------------------------')
                 yield env.timeout(8)
             else:
                 yield env.timeout(1)
                 
-    def C3_stock_control(self, env):
+    def I3_stock_control(self, env):
         yield env.timeout(0)
         while True:
-            if self.C3.level <= C3_critical_stock:
+            if self.Ingredient3.level <= C3_critical_stock:
                 print('Ingredient C3 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
-                    self.C3.level, int(env.now/8), env.now % 8))
+                    self.Ingredient3.level, int(env.now / 8), env.now % 8))
                 print('calling C3 supplier')
                 print('----------------------------------')
                 yield env.timeout(16)
                 print('C3 supplier arrives at day {0}, hour {1}'.format(
                     int(env.now/8), env.now % 8))
-                yield self.C3.put(300)
+                yield self.Ingredient3.put(300)
                 print('new ingredient stock is {0}'.format(
-                    self.C3.level))
+                    self.Ingredient3.level))
                 print('----------------------------------')
                 yield env.timeout(8)
             else:
                 yield env.timeout(1)
     
-    def F1_stock_control(self, env):
+    def I5_stock_control(self, env):
         yield env.timeout(0)
         while True:
-            if self.F1.level <= F1_critical_stock:
+            if self.Ingredient5.level <= F1_critical_stock:
                 print('Ingredient F1 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
-                    self.F1.level, int(env.now/8), env.now % 8))
+                    self.Ingredient5.level, int(env.now / 8), env.now % 8))
                 print('calling F1 supplier')
                 print('----------------------------------')
                 yield env.timeout(16)
                 print('F1 supplier arrives at day {0}, hour {1}'.format(
                     int(env.now/8), env.now % 8))
-                yield self.F1.put(300)
+                yield self.Ingredient5.put(300)
                 print('new ingredient stock is {0}'.format(
-                    self.F1.level))
+                    self.Ingredient5.level))
                 print('----------------------------------')
                 yield env.timeout(8)
             else:
                 yield env.timeout(1)
                 
-    def F2_stock_control(self, env):
+    def I6_stock_control(self, env):
         yield env.timeout(0)
         while True:
-            if self.F2.level <= F2_critical_stock:
+            if self.Ingredient6.level <= F2_critical_stock:
                 print('Ingredient F2 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
-                    self.F2.level, int(env.now/8), env.now % 8))
+                    self.Ingredient6.level, int(env.now / 8), env.now % 8))
                 print('calling F2 supplier')
                 print('----------------------------------')
                 yield env.timeout(16)
                 print('F2 supplier arrives at day {0}, hour {1}'.format(
                     int(env.now/8), env.now % 8))
-                yield self.F2.put(300)
+                yield self.Ingredient6.put(300)
                 print('new ingredient stock is {0}'.format(
-                    self.F2.level))
+                    self.Ingredient6.level))
                 print('----------------------------------')
                 yield env.timeout(8)
             else:
                 yield env.timeout(1)
                 
-    def F3_stock_control(self, env):
+    def I7_stock_control(self, env):
         yield env.timeout(0)
         while True:
-            if self.F3.level <= F3_critical_stock:
+            if self.Ingredient7.level <= F3_critical_stock:
                 print('Ingredient F3 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
-                    self.F3.level, int(env.now/8), env.now % 8))
+                    self.Ingredient7.level, int(env.now / 8), env.now % 8))
                 print('calling F3 supplier')
                 print('----------------------------------')
                 yield env.timeout(16)
                 print('F3 supplier arrives at day {0}, hour {1}'.format(
                     int(env.now/8), env.now % 8))
-                yield self.F3.put(300)
+                yield self.Ingredient7.put(300)
                 print('new ingredient stock is {0}'.format(
-                    self.F3.level))
+                    self.Ingredient7.level))
                 print('----------------------------------')
                 yield env.timeout(8)
             else:
                 yield env.timeout(1)
 
 
-    def CF1_stock_control(self, env):
+    def I9_stock_control(self, env):
         yield env.timeout(0)
         while True:
-            if self.CF1.level <= CF1_critical_stock:
+            if self.Ingredient9.level <= CF1_critical_stock:
                 print('Ingredient CF1 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
-                    self.CF1.level, int(env.now/8), env.now % 8))
+                    self.Ingredient9.level, int(env.now / 8), env.now % 8))
                 print('calling CF1 supplier')
                 print('----------------------------------')
                 yield env.timeout(16)
                 print('CF1 supplier arrives at day {0}, hour {1}'.format(
                     int(env.now/8), env.now % 8))
-                yield self.CF1.put(300)
+                yield self.Ingredient9.put(300)
                 print('new ingredient stock is {0}'.format(
-                    self.CF1.level))
+                    self.Ingredient9.level))
                 print('----------------------------------')
                 yield env.timeout(8)
             else:
                 yield env.timeout(1)
                 
-    def CF2_stock_control(self, env):
+    def I10_stock_control(self, env):
         yield env.timeout(0)
         while True:
-            if self.CF2.level <= CF2_critical_stock:
+            if self.Ingredient10.level <= CF2_critical_stock:
                 print('Ingredient CF2 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
-                    self.CF2.level, int(env.now/8), env.now % 8))
+                    self.Ingredient10.level, int(env.now / 8), env.now % 8))
                 print('calling CF2 supplier')
                 print('----------------------------------')
                 yield env.timeout(16)
                 print('CF2 supplier arrives at day {0}, hour {1}'.format(
                     int(env.now/8), env.now % 8))
-                yield self.CF2.put(300)
+                yield self.Ingredient10.put(300)
                 print('new ingredient stock is {0}'.format(
-                    self.CF2.level))
+                    self.Ingredient10.level))
                 print('----------------------------------')
                 yield env.timeout(8)
             else:
                 yield env.timeout(1)
-                
+
+# COVID vaccine recipe--------------------------------------------------------------------------------------------------
 def C_vaccine(env, name, vf):
     init_time = env.now
     with vf.worker.request() as request:
         yield request
         with vf.machine1.request() as request:
             yield request
-            yield env.process(vf.C_process1())
-            print('C1 remaing: ', vf.C1.level)
-            print('C1 processed: ', vf.postC1.level)
+            yield env.process(vf.COVID_process1())
+            print('C1 remaing: ', vf.Ingredient1.level)
+            print('C1 processed: ', vf.COVID_postProcess1_capacity.level)
     with vf.worker.request() as request:
         yield request
         with vf.machine2.request() as request:
             yield request
-            yield env.process(vf.C_process2())
-            print('C2 remaing: ', vf.C2.level)
-            print('C2 processed: ', vf.postC2.level)
+            yield env.process(vf.COVID_process2())
+            print('C2 remaing: ', vf.Ingredient2.level)
+            print('C2 processed: ', vf.COVID_postProcess2_capacity.level)
     with vf.worker.request() as request:
         yield request
         with vf.machine2.request() as request:
             yield request
-            yield env.process(vf.C_process3())
-            print('C3 remaing: ', vf.C3.level)
-            print('C3 processed: ', vf.postC3.level)
+            yield env.process(vf.COVID_process3())
+            print('C3 remaing: ', vf.Ingredient3.level)
+            print('C3 processed: ', vf.COVID_postProcess3_capacity.level)
     with vf.worker.request() as request:
         yield request
         with vf.machine1.request() as request:
             yield request
-            yield env.process(vf.C_process_final())
-            print('COVID vaccines processed: ', vf.postC.level)
+            yield env.process(vf.COVID_process_assembly())
+            print('COVID vaccines processed: ', vf.COVID_postAssembly_capacity.level)
     with vf.packaging_machine.request() as request:
         yield request
         yield env.process(vf.packaging())
 
     fin_time = env.now
     print('%s spent %.2f to be manufactured.' % (name, fin_time-init_time))
-    C_TIME_LIST.append(fin_time-init_time)
-    
+    COVID_time_list.append(fin_time - init_time)
+
+# FLU vaccine recipe----------------------------------------------------------------------------------------------------
 def F_vaccine(env, name, vf):
     init_time = env.now
     with vf.worker.request() as request:
         yield request
         with vf.machine1.request() as request:
             yield request
-            yield env.process(vf.F_process1())
-            print('F1 remaing: ', vf.F1.level)
-            print('F1 processed: ', vf.postF1.level)
+            yield env.process(vf.FLU_process1())
+            print('F1 remaing: ', vf.Ingredient5.level)
+            print('F1 processed: ', vf.FLU_postProcess1_capacity.level)
     with vf.worker.request() as request:
         yield request
         with vf.machine2.request() as request:
             yield request
-            yield env.process(vf.F_process2())
-            print('F2 remaing: ', vf.F2.level)
-            print('F2 processed: ', vf.postF2.level)
+            yield env.process(vf.FLU_process2())
+            print('F2 remaing: ', vf.Ingredient6.level)
+            print('F2 processed: ', vf.FLU_postProcess2_capacity.level)
     with vf.worker.request() as request:
         yield request
         with vf.machine2.request() as request:
             yield request
-            yield env.process(vf.F_process3())
-            print('F3 remaing: ', vf.F3.level)
-            print('F3 processed: ', vf.postF3.level)
+            yield env.process(vf.FLU_process3())
+            print('F3 remaing: ', vf.Ingredient7.level)
+            print('F3 processed: ', vf.FLU_postProcess3_capacity.level)
     with vf.worker.request() as request:
         yield request
         with vf.machine1.request() as request:
             yield request
-            yield env.process(vf.F_process_final())
-            print('Flu vaccines processed: ', vf.postF.level)
+            yield env.process(vf.FLU_process_assembly())
+            print('Flu vaccines processed: ', vf.FLU_postAssembly_capacity.level)
     with vf.packaging_machine.request() as request:
         yield request
         yield env.process(vf.packaging(C = False))
 
     fin_time = env.now
     print('%s spent %.2f to be manufactured.' % (name, fin_time-init_time))
-    F_TIME_LIST.append(fin_time-init_time)
+    FLU_time_list.append(fin_time - init_time)
 
-def setup(env, num_workers, num_machine1, num_machine2, C1time, C2time, C3time, C_order_inter, F_order_inter):
-    """Create a vaccine center, a number of initial people and keep creating people
-    approx. every ``appointment_inter`` minutes."""
+def setup(env):
+    """Create a vaccine facility, a number of initial orders and keep creating orders
+    approx. every ``order_inter`` minutes."""
     # Create the vaccine center
-    vf = vaccineFacility(env, num_workers, num_machine1, num_machine2, C1time, C2time, C3time)
+    vf = vaccineFacility(env)
 
     # # Create initial demand
-    for i in range(C_INIT_NUM_ORDER):
+    for i in range(COVID_initial_order_numbers):
         env.process(C_vaccine(env, 'Covid #%d' % i, vf))
 
     # Create initial demand
-    for i in range(F_INIT_NUM_ORDER):
+    for i in range(FLU_initial_order_numbers):
         env.process(F_vaccine(env, 'Flu #%d' % i, vf))
 
     # Create more orders while the simulation is running
@@ -454,9 +475,8 @@ def setup(env, num_workers, num_machine1, num_machine2, C1time, C2time, C3time, 
         env.process(F_vaccine(env, 'Flu #%d' % i, vf))
 
 env = simpy.Environment()
-env.process(setup(env, NUM_WORKERS, NUM_MACHINES1, NUM_MACHINES2, C1TIME, C2TIME, C3TIME, C_ORDER_INTER, F_ORDER_INTER))
+env.process(setup(env))
 env.run(until=SIM_TIME)
 
-print('It took an average of %.2f for each COVID vaccine to be produced.' % np.mean(C_TIME_LIST))
-print('It took an average of %.2f for each FLU vaccine to be produced.' % np.mean(F_TIME_LIST))
-# print(F_TIME_LIST)
+print('It took an average of %.2f for each COVID vaccine to be produced.' % np.mean(COVID_time_list))
+print('It took an average of %.2f for each FLU vaccine to be produced.' % np.mean(FLU_time_list))
