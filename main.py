@@ -13,23 +13,23 @@ import random
 import numpy as np
 
 NUM_WORKERS = 25
-NUM_MACHINES1 = 10
-NUM_MACHINES2 = 5
+NUM_MACHINES1 = 100
+NUM_MACHINES2 = 50
 
 NUM_PACKAGING = 10
 packagetime = 5
 DISPATCH_CAPACITY_C = 500 #these should change based on supply demand
-DISPATCH_CAPACITY_F = 200
+DISPATCH_CAPACITY_F = 500
 
 
-F_ORDER_INTER = 5
+F_ORDER_INTER = 3
 F_INIT_NUM_ORDER = 10
 C_ORDER_INTER = 3
 C_INIT_NUM_ORDER = 10
 
 work_days = 7
 work_hours = 8
-SIM_TIME = work_days*work_hours*100 # 1 work week
+SIM_TIME = work_days*work_hours*1000 # 1 work week
 C_TIME_LIST = []
 F_TIME_LIST = []
 
@@ -66,7 +66,7 @@ Ftime = 15
 CF1time = 20
 CF2time = 30
 
-INITF1 = 500
+INITF1 = 1000
 INITF2 = 500
 INITF3 = 500
 INITF4 = 500
@@ -92,10 +92,10 @@ POST_F2_CAPACITY = 500
 POST_F3_CAPACITY = 500
 FLU_VACCINE_CAPACITY = 1000
 
-CF1_CAPACITY = 6000
-CF2_CAPACITY = 6000
-INITCF1 = 5000
-INITCF2 = 5000
+CF1_CAPACITY = 60000
+CF2_CAPACITY = 60000
+INITCF1 = 50000
+INITCF2 = 50000
 
 class vaccineFacility(object):
     def __init__(self, env, num_workers, num_machines1, num_machines2, C1time, C2time, C3time):
@@ -435,7 +435,7 @@ def setup(env, num_workers, num_machine1, num_machine2, C1time, C2time, C3time, 
     # Create the vaccine center
     vf = vaccineFacility(env, num_workers, num_machine1, num_machine2, C1time, C2time, C3time)
 
-    # Create initial demand
+    # # Create initial demand
     for i in range(C_INIT_NUM_ORDER):
         env.process(C_vaccine(env, 'Covid #%d' % i, vf))
 
@@ -459,4 +459,4 @@ env.run(until=SIM_TIME)
 
 print('It took an average of %.2f for each COVID vaccine to be produced.' % np.mean(C_TIME_LIST))
 print('It took an average of %.2f for each FLU vaccine to be produced.' % np.mean(F_TIME_LIST))
-print(F_TIME_LIST)
+# print(F_TIME_LIST)
