@@ -67,14 +67,18 @@ ingredient2_in_COVIDprocess2 = 40
 # COVID process 3 uses ingredient 3 & ingredient 9
 ingredient3_in_COVIDprocess3 = 30
 ingredient9_in_COVIDprocess3 = 50
+# COVID assembly uses post processed 1, 2, 3, & ingredient 4
+ingredient4_in_COVIDassembly = 5
 
 # FLU process 1 uses ingredient 4
-ingredient4_in_FLUprocess1 = 50
+ingredient5_in_FLUprocess1 = 50
 # FLU process 2 uses ingredient 5
-ingredient5_in_FLUprocess2 = 40
+ingredient6_in_FLUprocess2 = 40
 # FLU process 3 uses ingredient 6 & ingredient 9
-ingredient5_in_FLUprocess3 = 30
+ingredient7_in_FLUprocess3 = 30
 ingredient9_in_FLUprocess3 = 40
+# FLU assembly uses post processed 1, 2, 3, $ ingredient 8
+ingredient8_in_FLUassembly = 5
 
 # Packaging is the same for COVID and FLU
 ingredient10_in_packaging = 40
@@ -96,9 +100,11 @@ FLU_dispatch_capacity = 500
 C1_critical_stock = 3 * (ingredient1_in_COVIDprocess1) * COVID_process1_time / work_hours
 C2_critical_stock = 3 * (ingredient2_in_COVIDprocess2) * COVID_process2_time / work_hours
 C3_critical_stock = 3 * (ingredient3_in_COVIDprocess3) * COVID_process3_time / work_hours
-F1_critical_stock = 3 * (ingredient4_in_FLUprocess1) * FLU_process1_time / work_hours
-F2_critical_stock = 3 * (ingredient5_in_FLUprocess2) * FLU_process2_time / work_hours
-F3_critical_stock = 3 * (ingredient5_in_FLUprocess3) * FLU_process3_time / work_hours
+C4_critical_stock = 3 * (ingredient4_in_COVIDassembly) * COVID_assembly_time / work_hours
+F1_critical_stock = 3 * (ingredient5_in_FLUprocess1) * FLU_process1_time / work_hours
+F2_critical_stock = 3 * (ingredient6_in_FLUprocess2) * FLU_process2_time / work_hours
+F3_critical_stock = 3 * (ingredient7_in_FLUprocess3) * FLU_process3_time / work_hours
+F4_critical_stock = 3 * (ingredient8_in_FLUassembly) * FLU_assembly_time / work_hours
 CF1_critical_stock = 3 * (ingredient9_in_COVIDprocess3) * (COVID_process3_time + FLU_process3_time) / work_hours
 CF2_critical_stock = 3 * (ingredient10_in_packaging) * Package_time / work_hours
 
@@ -184,21 +190,22 @@ class vaccineFacility(object):
         yield self.COVID_postProcess1_capacity.get(5)
         yield self.COVID_postProcess2_capacity.get(5)
         yield self.COVID_postProcess3_capacity.get(5)
+        yield self.Ingredient4.get(ingredient4_in_COVIDassembly)
         yield self.COVID_postAssembly_capacity.put(10)
         yield self.env.timeout(random.randint(self.COVID_assembly_time - 1, self.COVID_assembly_time + 1))
         
     def FLU_process1(self):
-        yield self.Ingredient5.get(ingredient4_in_FLUprocess1)
+        yield self.Ingredient5.get(ingredient5_in_FLUprocess1)
         yield self.FLU_postProcess1_capacity.put(50)
         yield self.env.timeout(random.randint(self.FLU_process1_time - 1, self.FLU_process1_time + 1))
 
     def FLU_process2(self):
-        yield self.Ingredient6.get(ingredient5_in_FLUprocess2)
+        yield self.Ingredient6.get(ingredient6_in_FLUprocess2)
         yield self.FLU_postProcess2_capacity.put(1)
         yield self.env.timeout(random.randint(self.FLU_process2_time - 1, self.FLU_process2_time + 1))
 
     def FLU_process3(self):
-        yield self.Ingredient7.get(ingredient5_in_FLUprocess3)
+        yield self.Ingredient7.get(ingredient7_in_FLUprocess3)
         yield self.Ingredient9.get(ingredient9_in_FLUprocess3)
         yield self.FLU_postProcess3_capacity.put(20)
         yield self.env.timeout(random.randint(self.FLU_process3_time - 1, self.FLU_process3_time + 1))
@@ -207,6 +214,7 @@ class vaccineFacility(object):
         yield self.FLU_postProcess1_capacity.get(5)
         yield self.FLU_postProcess2_capacity.get(5)
         yield self.FLU_postProcess3_capacity.get(5)
+        yield self.Ingredient8.get(ingredient8_in_FLUassembly)
         yield self.FLU_postAssembly_capacity.put(10)
         yield self.env.timeout(random.randint(self.FLU_assembly_time - 1, self.FLU_assembly_time + 1))
         
@@ -225,15 +233,15 @@ class vaccineFacility(object):
         yield env.timeout(0)
         while True:
             if self.Ingredient1.level <= C1_critical_stock:
-                print('Ingredient C1 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
+                print('Ingredient 1 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
                     self.Ingredient1.level, int(env.now / 8), env.now % 8))
-                print('calling C1 supplier')
+                print('calling I1 supplier')
                 print('----------------------------------')
                 yield env.timeout(16)
-                print('C1 supplier arrives at day {0}, hour {1}'.format(
+                print('I1 supplier arrives at day {0}, hour {1}'.format(
                     int(env.now/8), env.now % 8))
                 yield self.Ingredient1.put(300)
-                print('new ingredient stock is {0}'.format(
+                print('new ingredient 1 stock is {0}'.format(
                     self.Ingredient1.level))
                 print('----------------------------------')
                 yield env.timeout(8)
@@ -244,15 +252,15 @@ class vaccineFacility(object):
         yield env.timeout(0)
         while True:
             if self.Ingredient2.level <= C2_critical_stock:
-                print('Ingredient C2 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
+                print('Ingredient 2 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
                     self.Ingredient2.level, int(env.now / 8), env.now % 8))
-                print('calling C2 supplier')
+                print('calling I2 supplier')
                 print('----------------------------------')
                 yield env.timeout(16)
-                print('C2 supplier arrives at day {0}, hour {1}'.format(
+                print('I2 supplier arrives at day {0}, hour {1}'.format(
                     int(env.now/8), env.now % 8))
                 yield self.Ingredient2.put(300)
-                print('new ingredient stock is {0}'.format(
+                print('new ingredient 2 stock is {0}'.format(
                     self.Ingredient2.level))
                 print('----------------------------------')
                 yield env.timeout(8)
@@ -263,16 +271,34 @@ class vaccineFacility(object):
         yield env.timeout(0)
         while True:
             if self.Ingredient3.level <= C3_critical_stock:
-                print('Ingredient C3 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
+                print('Ingredient 3 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
                     self.Ingredient3.level, int(env.now / 8), env.now % 8))
-                print('calling C3 supplier')
+                print('calling I3 supplier')
                 print('----------------------------------')
                 yield env.timeout(16)
-                print('C3 supplier arrives at day {0}, hour {1}'.format(
+                print('I3 supplier arrives at day {0}, hour {1}'.format(
                     int(env.now/8), env.now % 8))
                 yield self.Ingredient3.put(300)
-                print('new ingredient stock is {0}'.format(
+                print('new ingredient 3 stock is {0}'.format(
                     self.Ingredient3.level))
+                print('----------------------------------')
+                yield env.timeout(8)
+            else:
+                yield env.timeout(1)
+    def I4_stock_control(self, env):
+        yield env.timeout(0)
+        while True:
+            if self.Ingredient4.level <= C4_critical_stock:
+                print('Ingredient 4 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
+                    self.Ingredient4.level, int(env.now / 8), env.now % 8))
+                print('calling I4 supplier')
+                print('----------------------------------')
+                yield env.timeout(16)
+                print('I4 supplier arrives at day {0}, hour {1}'.format(
+                    int(env.now/8), env.now % 8))
+                yield self.Ingredient4.put(300)
+                print('new ingredient 4 stock is {0}'.format(
+                    self.Ingredient4.level))
                 print('----------------------------------')
                 yield env.timeout(8)
             else:
@@ -282,15 +308,15 @@ class vaccineFacility(object):
         yield env.timeout(0)
         while True:
             if self.Ingredient5.level <= F1_critical_stock:
-                print('Ingredient F1 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
+                print('Ingredient 5 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
                     self.Ingredient5.level, int(env.now / 8), env.now % 8))
-                print('calling F1 supplier')
+                print('calling I5 supplier')
                 print('----------------------------------')
                 yield env.timeout(16)
-                print('F1 supplier arrives at day {0}, hour {1}'.format(
+                print('I5 supplier arrives at day {0}, hour {1}'.format(
                     int(env.now/8), env.now % 8))
                 yield self.Ingredient5.put(300)
-                print('new ingredient stock is {0}'.format(
+                print('new ingredient 5 stock is {0}'.format(
                     self.Ingredient5.level))
                 print('----------------------------------')
                 yield env.timeout(8)
@@ -301,15 +327,15 @@ class vaccineFacility(object):
         yield env.timeout(0)
         while True:
             if self.Ingredient6.level <= F2_critical_stock:
-                print('Ingredient F2 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
+                print('Ingredient 6 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
                     self.Ingredient6.level, int(env.now / 8), env.now % 8))
-                print('calling F2 supplier')
+                print('calling I6 supplier')
                 print('----------------------------------')
                 yield env.timeout(16)
-                print('F2 supplier arrives at day {0}, hour {1}'.format(
+                print('I6 supplier arrives at day {0}, hour {1}'.format(
                     int(env.now/8), env.now % 8))
                 yield self.Ingredient6.put(300)
-                print('new ingredient stock is {0}'.format(
+                print('new ingredient 6 stock is {0}'.format(
                     self.Ingredient6.level))
                 print('----------------------------------')
                 yield env.timeout(8)
@@ -320,35 +346,53 @@ class vaccineFacility(object):
         yield env.timeout(0)
         while True:
             if self.Ingredient7.level <= F3_critical_stock:
-                print('Ingredient F3 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
+                print('Ingredient 7 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
                     self.Ingredient7.level, int(env.now / 8), env.now % 8))
-                print('calling F3 supplier')
+                print('calling I7 supplier')
                 print('----------------------------------')
                 yield env.timeout(16)
-                print('F3 supplier arrives at day {0}, hour {1}'.format(
+                print('I7 supplier arrives at day {0}, hour {1}'.format(
                     int(env.now/8), env.now % 8))
                 yield self.Ingredient7.put(300)
-                print('new ingredient stock is {0}'.format(
+                print('new ingredient 7 stock is {0}'.format(
                     self.Ingredient7.level))
                 print('----------------------------------')
                 yield env.timeout(8)
             else:
                 yield env.timeout(1)
 
+    def I8_stock_control(self, env):
+        yield env.timeout(0)
+        while True:
+            if self.Ingredient8.level <= F4_critical_stock:
+                print('Ingredient 8 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
+                    self.Ingredient8.level, int(env.now / 8), env.now % 8))
+                print('calling I8 supplier')
+                print('----------------------------------')
+                yield env.timeout(16)
+                print('I8 supplier arrives at day {0}, hour {1}'.format(
+                    int(env.now/8), env.now % 8))
+                yield self.Ingredient7.put(300)
+                print('new ingredient 8 stock is {0}'.format(
+                    self.Ingredient7.level))
+                print('----------------------------------')
+                yield env.timeout(8)
+            else:
+                yield env.timeout(1)
 
     def I9_stock_control(self, env):
         yield env.timeout(0)
         while True:
             if self.Ingredient9.level <= CF1_critical_stock:
-                print('Ingredient CF1 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
+                print('Ingredient 9 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
                     self.Ingredient9.level, int(env.now / 8), env.now % 8))
-                print('calling CF1 supplier')
+                print('calling I9 supplier')
                 print('----------------------------------')
                 yield env.timeout(16)
-                print('CF1 supplier arrives at day {0}, hour {1}'.format(
+                print('I9 supplier arrives at day {0}, hour {1}'.format(
                     int(env.now/8), env.now % 8))
                 yield self.Ingredient9.put(300)
-                print('new ingredient stock is {0}'.format(
+                print('new ingredient 9 stock is {0}'.format(
                     self.Ingredient9.level))
                 print('----------------------------------')
                 yield env.timeout(8)
@@ -359,15 +403,15 @@ class vaccineFacility(object):
         yield env.timeout(0)
         while True:
             if self.Ingredient10.level <= CF2_critical_stock:
-                print('Ingredient CF2 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
+                print('Ingredient 10 stock bellow critical level ({0}) at day {1}, hour {2}'.format(
                     self.Ingredient10.level, int(env.now / 8), env.now % 8))
-                print('calling CF2 supplier')
+                print('calling I10 supplier')
                 print('----------------------------------')
                 yield env.timeout(16)
-                print('CF2 supplier arrives at day {0}, hour {1}'.format(
+                print('I10 supplier arrives at day {0}, hour {1}'.format(
                     int(env.now/8), env.now % 8))
                 yield self.Ingredient10.put(300)
-                print('new ingredient stock is {0}'.format(
+                print('new ingredient 10 stock is {0}'.format(
                     self.Ingredient10.level))
                 print('----------------------------------')
                 yield env.timeout(8)
@@ -375,7 +419,7 @@ class vaccineFacility(object):
                 yield env.timeout(1)
 
 # COVID vaccine recipe--------------------------------------------------------------------------------------------------
-def C_vaccine(env, name, vf):
+def COVID_vaccine(env, name, vf):
     init_time = env.now
     with vf.worker.request() as request:
         yield request
@@ -413,7 +457,7 @@ def C_vaccine(env, name, vf):
     COVID_time_list.append(fin_time - init_time)
 
 # FLU vaccine recipe----------------------------------------------------------------------------------------------------
-def F_vaccine(env, name, vf):
+def FLU_vaccine(env, name, vf):
     init_time = env.now
     with vf.worker.request() as request:
         yield request
@@ -458,21 +502,21 @@ def setup(env):
 
     # # Create initial demand
     for i in range(COVID_initial_order_numbers):
-        env.process(C_vaccine(env, 'Covid #%d' % i, vf))
+        env.process(COVID_vaccine(env, 'Covid #%d' % i, vf))
 
     # Create initial demand
     for i in range(FLU_initial_order_numbers):
-        env.process(F_vaccine(env, 'Flu #%d' % i, vf))
+        env.process(FLU_vaccine(env, 'Flu #%d' % i, vf))
 
     # Create more orders while the simulation is running
     while True:
-        yield env.timeout(random.randint(C_order_inter - 2, C_order_inter + 2))
+        yield env.timeout(random.randint(COVID_order_interval - 2, COVID_order_interval + 2))
         i += 1
-        env.process(C_vaccine(env, 'Covid #%d' % i, vf))
+        env.process(COVID_vaccine(env, 'Covid #%d' % i, vf))
         
-        yield env.timeout(random.randint(F_order_inter - 2, F_order_inter + 2))
+        yield env.timeout(random.randint(FLU_order_interval - 2, FLU_order_interval + 2))
         i += 1
-        env.process(F_vaccine(env, 'Flu #%d' % i, vf))
+        env.process(FLU_vaccine(env, 'Flu #%d' % i, vf))
 
 env = simpy.Environment()
 env.process(setup(env))
