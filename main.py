@@ -23,10 +23,10 @@ SIM_TIME = work_days * work_hours * 52  # year
 
 # RESOURCES-------------------------------------------------------------------------------------------------------------
 # Resources: resources: three different machines and generic technicians------------------------------------------------
-num_workers = 700
-num_machines1 = 200
-num_machines2 = 300
-num_packaging_machines = 500
+num_workers = 7000
+num_machines1 = 2000
+num_machines2 = 3000
+num_packaging_machines = 5000
 
 # Resources: containers-------------------------------------------------------------------------------------------------
 # Ingredient and their inital amounts and their raw store capacities----------------------------------------------------
