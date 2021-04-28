@@ -95,16 +95,16 @@ COVID_dispatch_capacity = total_dispatch_capacity / 2
 FLU_dispatch_capacity = total_dispatch_capacity / 2
 
 # STOCK ORDERING--------------------------------------------------------------------------------------------------------
-C1_critical_stock = 3 * ingredient1_in_COVIDprocess1 * COVID_process1_time / work_hours
-C2_critical_stock = 3 * ingredient2_in_COVIDprocess2 * COVID_process2_time / work_hours
-C3_critical_stock = 3 * ingredient3_in_COVIDprocess3 * COVID_process3_time / work_hours
-C4_critical_stock = 3 * ingredient4_in_COVIDassembly * COVID_assembly_time / work_hours
-F1_critical_stock = 3 * ingredient5_in_FLUprocess1 * FLU_process1_time / work_hours
-F2_critical_stock = 3 * ingredient6_in_FLUprocess2 * FLU_process2_time / work_hours
-F3_critical_stock = 3 * ingredient7_in_FLUprocess3 * FLU_process3_time / work_hours
-F4_critical_stock = 3 * ingredient8_in_FLUassembly * FLU_assembly_time / work_hours
-CF1_critical_stock = 3 * ingredient9_in_COVIDprocess3 * (COVID_process3_time + FLU_process3_time) / work_hours
-CF2_critical_stock = 3 * ingredient10_in_packaging * Package_time / work_hours
+C1_critical_stock = 3*ingredient1_in_COVIDprocess1 * work_hours / COVID_process1_time
+C2_critical_stock = 3 * ingredient2_in_COVIDprocess2 * work_hours / COVID_process2_time
+C3_critical_stock = 3 * ingredient3_in_COVIDprocess3 * work_hours / COVID_process3_time
+C4_critical_stock = 3 * ingredient4_in_COVIDassembly * work_hours / COVID_assembly_time
+F1_critical_stock = 3 * ingredient5_in_FLUprocess1 * work_hours / FLU_process1_time
+F2_critical_stock = 3 * ingredient6_in_FLUprocess2 * work_hours / FLU_process2_time
+F3_critical_stock = 3 * ingredient7_in_FLUprocess3 *  work_hours / FLU_process3_time
+F4_critical_stock = 3 * ingredient8_in_FLUassembly * work_hours / FLU_assembly_time
+CF1_critical_stock = 3 * ingredient9_in_COVIDprocess3 * work_hours/ (COVID_process3_time + FLU_process3_time) 
+CF2_critical_stock = 3 * ingredient10_in_packaging * work_hours / Package_time
 
 # DEMAND----------------------------------------------------------------------------------------------------------------
 # TODO: These change with demand
@@ -187,6 +187,9 @@ class vaccineFacility(object):
         self.FLU_process3_time = FLU_process3_time
         self.FLU_assembly_time = FLU_assembly_time
         self.package_time = Package_time
+        
+        self.vaccinated_pop = vaccinated_pop
+        self.unvaccinated_pop = unvaccinated_pop
 
     # Define each process-----------------------------------------------------------------------------------------------
     def COVID_process1(self):
@@ -269,7 +272,7 @@ class vaccineFacility(object):
     def dispatch_control(self, env, vaccine, C=True):
         yield env.timeout(0)
         while True:
-            print('Vaccine Level', vaccine.level)
+            # print('Vaccine Level', vaccine.level)
             if vaccine.level >= 50:
                 print(
                     'dispatch stock is {0}, calling distributor to pick up COVID vaccines at day {1}, hour {2}'.format(
@@ -279,8 +282,8 @@ class vaccineFacility(object):
                 print('Distributed {0} vaccines at day {1}, hour {2}'.format(vaccine.level, int(env.now / 8),
                                                                              env.now % 8))
                 if C:
-                    vaccinated_pop += vaccine.level
-                    unvaccinated_pop -= vaccine.level
+                    self.vaccinated_pop += vaccine.level
+                    self.unvaccinated_pop -= vaccine.level
                 yield vaccine.get(vaccine.level)
                 print('----------------------------------')
                 yield env.timeout(8)
@@ -404,7 +407,7 @@ def setup(env):
 
     # Create more orders while the simulation is running
     while unvaccinated_pop > 0:
-        print('Vaccinated Pop: ', vaccinated_pop)
+        # print('Vaccinated Pop: ', vaccinated_pop)
         yield env.timeout(random.randint(COVID_order_interval - 2, COVID_order_interval + 2))
         i += COVID_order_amount
         env.process(COVID_vaccine(env, 'Covid #%d' % i, vf))
