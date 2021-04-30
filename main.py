@@ -62,9 +62,9 @@ ingredient1_in_COVIDprocess1 = 5
 ingredient2_in_COVIDprocess2 = 4
 # COVID process 3 uses ingredient 3 & ingredient 9
 ingredient3_in_COVIDprocess3 = 3
-ingredient9_in_COVIDprocess3 = 5
+ingredient4_in_COVIDprocess3 = 5
 # COVID assembly uses post processed 1, 2, 3, & ingredient 4
-ingredient4_in_COVIDassembly = 5
+ingredient9_in_COVIDassembly = 5
 
 # FLU process 1 uses ingredient 4
 ingredient5_in_FLUprocess1 = 5
@@ -72,9 +72,9 @@ ingredient5_in_FLUprocess1 = 5
 ingredient6_in_FLUprocess2 = 4
 # FLU process 3 uses ingredient 6 & ingredient 9
 ingredient7_in_FLUprocess3 = 3
-ingredient9_in_FLUprocess3 = 4
+ingredient8_in_FLUprocess3 = 4
 # FLU assembly uses post processed 1, 2, 3, $ ingredient 8
-ingredient8_in_FLUassembly = 5
+ingredient9_in_FLUassembly = 5
 
 # Packaging is the same for COVID and FLU
 ingredient10_in_packaging = 4
@@ -98,12 +98,12 @@ FLU_dispatch_capacity = total_dispatch_capacity / 2
 C1_critical_stock = 3*ingredient1_in_COVIDprocess1 * work_hours / COVID_process1_time
 C2_critical_stock = 3 * ingredient2_in_COVIDprocess2 * work_hours / COVID_process2_time
 C3_critical_stock = 3 * ingredient3_in_COVIDprocess3 * work_hours / COVID_process3_time
-C4_critical_stock = 3 * ingredient4_in_COVIDassembly * work_hours / COVID_assembly_time
+C4_critical_stock = 3 * ingredient4_in_COVIDprocess3 * work_hours / COVID_assembly_time
 F1_critical_stock = 3 * ingredient5_in_FLUprocess1 * work_hours / FLU_process1_time
 F2_critical_stock = 3 * ingredient6_in_FLUprocess2 * work_hours / FLU_process2_time
 F3_critical_stock = 3 * ingredient7_in_FLUprocess3 *  work_hours / FLU_process3_time
-F4_critical_stock = 3 * ingredient8_in_FLUassembly * work_hours / FLU_assembly_time
-CF1_critical_stock = 3 * ingredient9_in_COVIDprocess3 * work_hours/ (COVID_process3_time + FLU_process3_time) 
+F4_critical_stock = 3 * ingredient8_in_FLUprocess3 * work_hours / FLU_assembly_time
+CF1_critical_stock = 3 * (ingredient9_in_COVIDassembly + ingredient9_in_FLUassembly) * work_hours/ (COVID_process3_time + FLU_process3_time) 
 CF2_critical_stock = 3 * ingredient10_in_packaging * work_hours / Package_time
 
 # DEMAND----------------------------------------------------------------------------------------------------------------
@@ -204,7 +204,7 @@ class vaccineFacility(object):
 
     def COVID_process3(self):
         yield self.Ingredient3.get(ingredient3_in_COVIDprocess3)
-        yield self.Ingredient9.get(ingredient9_in_COVIDprocess3)
+        yield self.Ingredient4.get(ingredient4_in_COVIDprocess3)
         yield self.COVID_postProcess3_capacity.put(20)
         yield self.env.timeout(random.randint(self.COVID_process3_time - 1, self.COVID_process3_time + 1))
 
@@ -212,7 +212,7 @@ class vaccineFacility(object):
         yield self.COVID_postProcess1_capacity.get(5)
         yield self.COVID_postProcess2_capacity.get(5)
         yield self.COVID_postProcess3_capacity.get(5)
-        yield self.Ingredient4.get(ingredient4_in_COVIDassembly)
+        yield self.Ingredient9.get(ingredient9_in_COVIDassembly)
         yield self.COVID_postAssembly_capacity.put(10)
         yield self.env.timeout(random.randint(self.COVID_assembly_time - 1, self.COVID_assembly_time + 1))
 
@@ -228,7 +228,7 @@ class vaccineFacility(object):
 
     def FLU_process3(self):
         yield self.Ingredient7.get(ingredient7_in_FLUprocess3)
-        yield self.Ingredient9.get(ingredient9_in_FLUprocess3)
+        yield self.Ingredient8.get(ingredient8_in_FLUprocess3)
         yield self.FLU_postProcess3_capacity.put(20)
         yield self.env.timeout(random.randint(self.FLU_process3_time - 1, self.FLU_process3_time + 1))
 
@@ -236,7 +236,7 @@ class vaccineFacility(object):
         yield self.FLU_postProcess1_capacity.get(5)
         yield self.FLU_postProcess2_capacity.get(5)
         yield self.FLU_postProcess3_capacity.get(5)
-        yield self.Ingredient8.get(ingredient8_in_FLUassembly)
+        yield self.Ingredient9.get(ingredient9_in_FLUassembly)
         yield self.FLU_postAssembly_capacity.put(10)
         yield self.env.timeout(random.randint(self.FLU_assembly_time - 1, self.FLU_assembly_time + 1))
 
@@ -325,21 +325,21 @@ def COVID_vaccine(env, name, vf):
             # print('C1 processed: ', vf.COVID_postProcess1_capacity.level)
     with vf.worker.request() as request:
         yield request
-        with vf.machine2.request() as request:
+        with vf.machine1.request() as request:
             yield request
             yield env.process(vf.COVID_process2())
             # print('C2 remaing: ', vf.Ingredient2.level)
             # print('C2 processed: ', vf.COVID_postProcess2_capacity.level)
     with vf.worker.request() as request:
         yield request
-        with vf.machine2.request() as request:
+        with vf.machine1.request() as request:
             yield request
             yield env.process(vf.COVID_process3())
             # print('C3 remaing: ', vf.Ingredient3.level)
             # print('C3 processed: ', vf.COVID_postProcess3_capacity.level)
     with vf.worker.request() as request:
         yield request
-        with vf.machine1.request() as request:
+        with vf.machine2.request() as request:
             yield request
             yield env.process(vf.COVID_process_assembly())
             print('COVID vaccines processed: ', vf.COVID_postAssembly_capacity.level)
@@ -364,21 +364,21 @@ def FLU_vaccine(env, name, vf):
             print('F1 processed: ', vf.FLU_postProcess1_capacity.level)
     with vf.worker.request() as request:
         yield request
-        with vf.machine2.request() as request:
+        with vf.machine1.request() as request:
             yield request
             yield env.process(vf.FLU_process2())
             print('F2 remaing: ', vf.Ingredient6.level)
             print('F2 processed: ', vf.FLU_postProcess2_capacity.level)
     with vf.worker.request() as request:
         yield request
-        with vf.machine2.request() as request:
+        with vf.machine1.request() as request:
             yield request
             yield env.process(vf.FLU_process3())
             print('F3 remaing: ', vf.Ingredient7.level)
             print('F3 processed: ', vf.FLU_postProcess3_capacity.level)
     with vf.worker.request() as request:
         yield request
-        with vf.machine1.request() as request:
+        with vf.machine2.request() as request:
             yield request
             yield env.process(vf.FLU_process_assembly())
             print('Flu vaccines processed: ', vf.FLU_postAssembly_capacity.level)
