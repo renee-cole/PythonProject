@@ -8,10 +8,12 @@
 import simpy
 import random
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 class ingredient:
     def __init__(self, initialAmount, capacity):
+        self.initial = initialAmount
         self.amount = capacity
         self.capacity = capacity
 
@@ -80,14 +82,14 @@ ingredient9_in_FLUassembly = 5
 ingredient10_in_packaging = 4
 
 # PROCESSES-------------------------------------------------------------------------------------------------------------
-COVID_process1_time = 1
-COVID_process2_time = 1
-COVID_process3_time = 2
-COVID_assembly_time = 3
-FLU_process1_time = 1
-FLU_process2_time = 1
+COVID_process1_time = 3
+COVID_process2_time = 3
+COVID_process3_time = 3
+COVID_assembly_time = 4
+FLU_process1_time = 5
+FLU_process2_time = 3
 FLU_process3_time = 2
-FLU_assembly_time = 3
+FLU_assembly_time = 4
 Package_time = 1
 total_dispatch_capacity = 1000
 # TODO: These change with demand
@@ -141,16 +143,16 @@ class vaccineFacility(object):
         self.packaging_machine = simpy.Resource(env, num_packaging_machines)
         self.env = env
 
-        self.Ingredient1 = simpy.Container(env, capacity=ingredient1.capacity, init=ingredient1.amount)
-        self.Ingredient2 = simpy.Container(env, capacity=ingredient2.capacity, init=ingredient2.amount)
-        self.Ingredient3 = simpy.Container(env, capacity=ingredient3.capacity, init=ingredient3.amount)
-        self.Ingredient4 = simpy.Container(env, capacity=ingredient4.capacity, init=ingredient4.amount)
-        self.Ingredient5 = simpy.Container(env, capacity=ingredient5.capacity, init=ingredient5.amount)
-        self.Ingredient6 = simpy.Container(env, capacity=ingredient6.capacity, init=ingredient6.amount)
-        self.Ingredient7 = simpy.Container(env, capacity=ingredient7.capacity, init=ingredient7.amount)
-        self.Ingredient8 = simpy.Container(env, capacity=ingredient8.capacity, init=ingredient8.amount)
-        self.Ingredient9 = simpy.Container(env, capacity=ingredient9.capacity, init=ingredient9.amount)
-        self.Ingredient10 = simpy.Container(env, capacity=ingredient10.capacity, init=ingredient10.amount)
+        self.Ingredient1 = simpy.Container(env, capacity=ingredient1.capacity, init=ingredient1.initial)
+        self.Ingredient2 = simpy.Container(env, capacity=ingredient2.capacity, init=ingredient2.initial)
+        self.Ingredient3 = simpy.Container(env, capacity=ingredient3.capacity, init=ingredient3.initial)
+        self.Ingredient4 = simpy.Container(env, capacity=ingredient4.capacity, init=ingredient4.initial)
+        self.Ingredient5 = simpy.Container(env, capacity=ingredient5.capacity, init=ingredient5.initial)
+        self.Ingredient6 = simpy.Container(env, capacity=ingredient6.capacity, init=ingredient6.initial)
+        self.Ingredient7 = simpy.Container(env, capacity=ingredient7.capacity, init=ingredient7.initial)
+        self.Ingredient8 = simpy.Container(env, capacity=ingredient8.capacity, init=ingredient8.initial)
+        self.Ingredient9 = simpy.Container(env, capacity=ingredient9.capacity, init=ingredient9.initial)
+        self.Ingredient10 = simpy.Container(env, capacity=ingredient10.capacity, init=ingredient10.initial)
 
         self.ingredient1_stock_control = env.process(self.stock_control(env, self.Ingredient1, 'Ingredient 1'))
         self.ingredient2_stock_control = env.process(self.stock_control(env, self.Ingredient2, 'Ingredient 2'))
@@ -255,7 +257,7 @@ class vaccineFacility(object):
         yield env.timeout(0)
         while True:
             if ingred.level <= C1_critical_stock:
-                print('{0} stock bellow critical level ({1}) at day {2}, hour {3}'.format(name, ingred.level,
+                print('{0} stock below critical level ({1}) at day {2}, hour {3}'.format(name, ingred.level,
                                                                                           int(env.now / 8),
                                                                                           env.now % 8))
                 print('calling', name, 'supplier')
@@ -313,9 +315,12 @@ class vaccineFacility(object):
 
             # COVID vaccine recipe--------------------------------------------------------------------------------------------------
 
-
+ingredient10level = []
+ingredient10time = []
 def COVID_vaccine(env, name, vf):
     init_time = env.now
+    # ingredient3time.append(env.now)
+    # ingredient3level.append(vf.Ingredient3.level)
     with vf.worker.request() as request:
         yield request
         with vf.machine1.request() as request:
@@ -360,21 +365,21 @@ def FLU_vaccine(env, name, vf):
         with vf.machine1.request() as request:
             yield request
             yield env.process(vf.FLU_process1())
-            print('F1 remaing: ', vf.Ingredient5.level)
+            print('F1 remaining: ', vf.Ingredient5.level)
             print('F1 processed: ', vf.FLU_postProcess1_capacity.level)
     with vf.worker.request() as request:
         yield request
         with vf.machine1.request() as request:
             yield request
             yield env.process(vf.FLU_process2())
-            print('F2 remaing: ', vf.Ingredient6.level)
+            print('F2 remaining: ', vf.Ingredient6.level)
             print('F2 processed: ', vf.FLU_postProcess2_capacity.level)
     with vf.worker.request() as request:
         yield request
         with vf.machine1.request() as request:
             yield request
             yield env.process(vf.FLU_process3())
-            print('F3 remaing: ', vf.Ingredient7.level)
+            print('F3 remaining: ', vf.Ingredient7.level)
             print('F3 processed: ', vf.FLU_postProcess3_capacity.level)
     with vf.worker.request() as request:
         yield request
@@ -404,7 +409,8 @@ def setup(env):
     # Create initial demand
     for i in range(FLU_initial_order_numbers):
         env.process(FLU_vaccine(env, 'Flu #%d' % i, vf))
-
+    
+    
     # Create more orders while the simulation is running
     while unvaccinated_pop > 0:
         # print('Vaccinated Pop: ', vaccinated_pop)
@@ -415,6 +421,10 @@ def setup(env):
         yield env.timeout(random.randint(FLU_order_interval - 2, FLU_order_interval + 2))
         i += FLU_order_amount
         env.process(FLU_vaccine(env, 'Flu #%d' % i, vf))
+        
+        ingredient10time.append(env.now)
+        ingredient10level.append(vf.FLU_postProcess3_capacity.level)
+        print(env.now)
 
     print(env.now)
 
@@ -424,3 +434,6 @@ env.process(setup(env))
 env.run(until=SIM_TIME)
 print('It took an average of %.2f for each COVID vaccine to be produced.' % np.mean(COVID_time_list))
 print('It took an average of %.2f for each FLU vaccine to be produced.' % np.mean(FLU_time_list))
+# print(ingredient10level)
+plt.plot(ingredient10time,ingredient10level)
+    
