@@ -26,16 +26,23 @@ SIM_TIME = work_days * work_hours * 52  # year
 # RESOURCES-------------------------------------------------------------------------------------------------------------
 # Resources: resources: three different machines and generic technicians------------------------------------------------
 num_workers = 7000
-num_machines1 = 2000
-num_machines2 = 3000
+num_machines1 = 20000
+num_machines2 = 30000
+num_machines3 = 20000
+num_machines4 = 20000
+num_machines5 = 20000
+num_machines6 = 20000
+num_machines7 = 20000
+num_machines8 = 20000
+num_machines9 = 20000
 num_packaging_machines = 5000
 
 # Resources: containers-------------------------------------------------------------------------------------------------
 # Ingredient and their inital amounts and their raw store capacities----------------------------------------------------
 ingredient1 = ingredient(500, 1000)
 ingredient2 = ingredient(500, 1000)
-ingredient3 = ingredient(400, 1000)
-ingredient4 = ingredient(400, 1000)
+ingredient3 = ingredient(500, 1000)
+ingredient4 = ingredient(500, 1000)
 ingredient5 = ingredient(1000, 1000)
 ingredient6 = ingredient(500, 1000)
 ingredient7 = ingredient(500, 1000)
@@ -97,7 +104,7 @@ COVID_dispatch_capacity = total_dispatch_capacity / 2
 FLU_dispatch_capacity = total_dispatch_capacity / 2
 
 # STOCK ORDERING--------------------------------------------------------------------------------------------------------
-C1_critical_stock = 3*ingredient1_in_COVIDprocess1 * work_hours / COVID_process1_time
+C1_critical_stock = 3 * ingredient1_in_COVIDprocess1 * work_hours / COVID_process1_time
 C2_critical_stock = 3 * ingredient2_in_COVIDprocess2 * work_hours / COVID_process2_time
 C3_critical_stock = 3 * ingredient3_in_COVIDprocess3 * work_hours / COVID_process3_time
 C4_critical_stock = 3 * ingredient4_in_COVIDprocess3 * work_hours / COVID_assembly_time
@@ -140,6 +147,13 @@ class vaccineFacility(object):
         self.worker = simpy.Resource(env, num_workers)
         self.machine1 = simpy.Resource(env, num_machines1)
         self.machine2 = simpy.Resource(env, num_machines2)
+        self.machine3 = simpy.Resource(env, num_machines3)
+        self.machine4 = simpy.Resource(env, num_machines4)
+        self.machine5 = simpy.Resource(env, num_machines5)
+        self.machine6 = simpy.Resource(env, num_machines6)
+        self.machine7 = simpy.Resource(env, num_machines7)
+        self.machine8 = simpy.Resource(env, num_machines8)
+        self.machine9 = simpy.Resource(env, num_machines9)
         self.packaging_machine = simpy.Resource(env, num_packaging_machines)
         self.env = env
 
@@ -201,7 +215,7 @@ class vaccineFacility(object):
 
     def COVID_process2(self):
         yield self.Ingredient2.get(ingredient2_in_COVIDprocess2)
-        yield self.COVID_postProcess2_capacity.put(1)
+        yield self.COVID_postProcess2_capacity.put(50)
         yield self.env.timeout(random.randint(self.COVID_process2_time - 1, self.COVID_process2_time + 1))
 
     def COVID_process3(self):
@@ -225,7 +239,7 @@ class vaccineFacility(object):
 
     def FLU_process2(self):
         yield self.Ingredient6.get(ingredient6_in_FLUprocess2)
-        yield self.FLU_postProcess2_capacity.put(1)
+        yield self.FLU_postProcess2_capacity.put(50)
         yield self.env.timeout(random.randint(self.FLU_process2_time - 1, self.FLU_process2_time + 1))
 
     def FLU_process3(self):
@@ -321,30 +335,34 @@ def COVID_vaccine(env, name, vf):
     init_time = env.now
     # ingredient3time.append(env.now)
     # ingredient3level.append(vf.Ingredient3.level)
+    # with vf.worker.request() as request:
+    #     yield request
+    with vf.machine1.request() as request:
+        yield request
+        # print('here')
+        yield env.process(vf.COVID_process1())
+        yield env.process(vf.COVID_process2())
+        yield env.process(vf.COVID_process3())
+        # print('C1 remaining: ', vf.Ingredient1.level)
+        # print('C1 processed: ', vf.COVID_postProcess1_capacity.level)
+    # with vf.worker.request() as request:
+    #     yield request
+    with vf.machine2.request() as request:
+        yield request
+        print('here')
+        yield env.process(vf.COVID_process2())
+        # print('C2 remaing: ', vf.Ingredient2.level)
+        # print('C2 processed: ', vf.COVID_postProcess2_capacity.level)
     with vf.worker.request() as request:
         yield request
-        with vf.machine1.request() as request:
-            yield request
-            yield env.process(vf.COVID_process1())
-            # print('C1 remaining: ', vf.Ingredient1.level)
-            # print('C1 processed: ', vf.COVID_postProcess1_capacity.level)
-    with vf.worker.request() as request:
-        yield request
-        with vf.machine1.request() as request:
-            yield request
-            yield env.process(vf.COVID_process2())
-            # print('C2 remaing: ', vf.Ingredient2.level)
-            # print('C2 processed: ', vf.COVID_postProcess2_capacity.level)
-    with vf.worker.request() as request:
-        yield request
-        with vf.machine1.request() as request:
+        with vf.machine3.request() as request:
             yield request
             yield env.process(vf.COVID_process3())
             # print('C3 remaing: ', vf.Ingredient3.level)
             # print('C3 processed: ', vf.COVID_postProcess3_capacity.level)
     with vf.worker.request() as request:
         yield request
-        with vf.machine2.request() as request:
+        with vf.machine4.request() as request:
             yield request
             yield env.process(vf.COVID_process_assembly())
             print('COVID vaccines processed: ', vf.COVID_postAssembly_capacity.level)
@@ -362,28 +380,28 @@ def FLU_vaccine(env, name, vf):
     init_time = env.now
     with vf.worker.request() as request:
         yield request
-        with vf.machine1.request() as request:
+        with vf.machine5.request() as request:
             yield request
             yield env.process(vf.FLU_process1())
             print('F1 remaining: ', vf.Ingredient5.level)
             print('F1 processed: ', vf.FLU_postProcess1_capacity.level)
     with vf.worker.request() as request:
         yield request
-        with vf.machine1.request() as request:
+        with vf.machine6.request() as request:
             yield request
             yield env.process(vf.FLU_process2())
             print('F2 remaining: ', vf.Ingredient6.level)
             print('F2 processed: ', vf.FLU_postProcess2_capacity.level)
     with vf.worker.request() as request:
         yield request
-        with vf.machine1.request() as request:
+        with vf.machine7.request() as request:
             yield request
             yield env.process(vf.FLU_process3())
             print('F3 remaining: ', vf.Ingredient7.level)
             print('F3 processed: ', vf.FLU_postProcess3_capacity.level)
     with vf.worker.request() as request:
         yield request
-        with vf.machine2.request() as request:
+        with vf.machine8.request() as request:
             yield request
             yield env.process(vf.FLU_process_assembly())
             print('Flu vaccines processed: ', vf.FLU_postAssembly_capacity.level)
@@ -407,8 +425,8 @@ def setup(env):
         env.process(COVID_vaccine(env, 'Covid #%d' % i, vf))
 
     # Create initial demand
-    for i in range(FLU_initial_order_numbers):
-        env.process(FLU_vaccine(env, 'Flu #%d' % i, vf))
+    # for i in range(FLU_initial_order_numbers):
+    #     env.process(FLU_vaccine(env, 'Flu #%d' % i, vf))
     
     
     # Create more orders while the simulation is running
@@ -418,12 +436,13 @@ def setup(env):
         i += COVID_order_amount
         env.process(COVID_vaccine(env, 'Covid #%d' % i, vf))
 
-        yield env.timeout(random.randint(FLU_order_interval - 2, FLU_order_interval + 2))
-        i += FLU_order_amount
-        env.process(FLU_vaccine(env, 'Flu #%d' % i, vf))
+        # yield env.timeout(random.randint(FLU_order_interval - 2, FLU_order_interval + 2))
+        # i += FLU_order_amount
+        # env.process(FLU_vaccine(env, 'Flu #%d' % i, vf))
         
+        """Change vf.Ingredient# to change what is plotted"""
         ingredient10time.append(env.now)
-        ingredient10level.append(vf.FLU_postProcess3_capacity.level)
+        ingredient10level.append(vf.Ingredient2.level)
         print(env.now)
 
     print(env.now)
@@ -434,6 +453,6 @@ env.process(setup(env))
 env.run(until=SIM_TIME)
 print('It took an average of %.2f for each COVID vaccine to be produced.' % np.mean(COVID_time_list))
 print('It took an average of %.2f for each FLU vaccine to be produced.' % np.mean(FLU_time_list))
-# print(ingredient10level)
+print(ingredient10level)
 plt.plot(ingredient10time,ingredient10level)
     
