@@ -19,7 +19,7 @@ class ingredient:
 # WORK DAY INFORMATION--------------------------------------------------------------------------------------------------
 work_days = 7
 work_hours = 8
-work_weeks = 52*2
+work_weeks = 52*10
 SIM_TIME = work_days * work_hours * work_weeks   # Total Work Time
 
 # RESOURCES------------------------------------------------------------------------------------------------------------
@@ -45,17 +45,17 @@ ingredient10 = ingredient(1000, 60000, 0.01)
 
 # INGREDIENTS & STORES--------------------------------------------------------------------------------------------------
 # Ingredients post-processing (pocesses 1-3) store capacities-----------------------------------------------------------
-COVID_postProcess1_capacity = 1000
-COVID_postProcess2_capacity = 1000
-COVID_postProcess3_capacity = 1000
-COVID_postAssembly_capacity = 1000
-COVID_dispatch_capacity = 1000
+COVID_postProcess1_capacity = 10000
+COVID_postProcess2_capacity = 10000
+COVID_postProcess3_capacity = 10000
+COVID_postAssembly_capacity = 10000
+COVID_dispatch_capacity = 10000
 
-FLU_postProcess1_capacity = 1000
-FLU_postProcess2_capacity = 1000
-FLU_postProcess3_capacity = 1000
-FLU_postAssembly_capacity = 1000
-FLU_dispatch_capacity = 1000
+FLU_postProcess1_capacity = 10000
+FLU_postProcess2_capacity = 10000
+FLU_postProcess3_capacity = 10000
+FLU_postAssembly_capacity = 10000
+FLU_dispatch_capacity = 10000
 
 # Ingredients used in each initial process raw ingredients (these are used to determine reordering of stock)------------
 # COVID process 1 uses ingredient 1
@@ -118,7 +118,7 @@ FLU_order_amount = 1
 FLU_initial_order_numbers = 10
 
 # POPULATION------------------------------------------------------------------------------------------------------------
-total_population = 10000
+total_population = 50000
 prop_antivaxxers = 0.1
 vaccinated_pop = 0
 unvaccinated_pop = total_population * (1 - prop_antivaxxers)
@@ -184,7 +184,6 @@ class vaccineFacility(object):
 
         self.FLU_distribution = env.process(self.dispatch_control(env, self.FLU_dispatch, False))
         self.COVID_distribution = env.process(self.dispatch_control(env, self.COVID_dispatch, True))
-        # self.FLU_distribution = env.process(self.dispatch_control(env, self.FLU_dispatch, False))
 
         self.COVID_process1_time = COVID_process1_time
         self.COVID_process2_time = COVID_process2_time
@@ -203,7 +202,6 @@ class vaccineFacility(object):
         self.percent_at_risk = percent_at_risk
         self.percent_adults = percent_adults
         self.percent_everyone = 1 - self.percent_adults - self.percent_at_risk - self.percent_health_workers
-        self.vaccinated_pop = vaccinated_pop
         self.unvaccinated_pop = self.total_population * (1 - self.prop_antivaxxers)
         
         self.demand_control = env.process(self.demand_control(env))
@@ -232,7 +230,7 @@ class vaccineFacility(object):
         yield self.COVID_postProcess3_capacity.get(5)
         yield self.Ingredient9.get(ingredient9_in_COVIDassembly)
         yield self.env.timeout(random.randint(self.COVID_assembly_time - 1, self.COVID_assembly_time + 1))
-        yield self.COVID_postAssembly_capacity.put(80)
+        yield self.COVID_postAssembly_capacity.put(8)
 
     def FLU_process1(self):
         yield self.Ingredient5.get(ingredient5_in_FLUprocess1)
@@ -318,28 +316,31 @@ class vaccineFacility(object):
 
     # Define population demand------------------------------------------------------------------------------------------
     def demand_control(self,env):
+        yield env.timeout(0)
         while True:
-            if self.unvaccinated_pop > 0:
-                unvaccinated_percent = self.unvaccinated_pop / self.total_population * (1 - self.prop_antivaxxers)
-                COVID_dispatch_capacity = total_dispatch_capacity * unvaccinated_percent
-                FLU_dispatch_capacity = total_dispatch_capacity - COVID_dispatch_capacity
-    
-                # stage 1: only vaccinate health workers in 1 month
-                if (self.vaccinated_pop / self.total_population <= self.percent_health_workers):
-                    self.COVID_order_amount = 3 * self.percent_health_workers * self.total_population / (8 * 7 * 4)
-    
-                # stage 2: vaccinate at risk in 2 months
-                elif (self.vaccinated_pop / self.total_population <= (self.percent_health_workers + self.percent_at_risk)):
-                    self.COVID_order_amount = 3 * self.percent_at_risk * self.total_population / (8 * 7 * 30)
-    
-                # stage 3: vaccinate adults in 3 months
-                elif (self.vaccinated_pop / self.total_population <= (self.percent_health_workers + self.percent_at_risk + self.percent_adults)):
-                    self.COVID_order_amount = 3 * self.percent_adults * self.total_population / (8 * 7 * 50)
-                # stage 4: vaccinate everyone whenever
-                else:
-                    self.COVID_order_amount = 10
-                return self.COVID_order_amount
-                yield env.timeout(0)
+             if self.unvaccinated_pop > 0:
+
+                    unvaccinated_percent = self.unvaccinated_pop / self.total_population * (1 - self.prop_antivaxxers)
+                    COVID_dispatch_capacity = total_dispatch_capacity * unvaccinated_percent
+                    FLU_dispatch_capacity = total_dispatch_capacity - COVID_dispatch_capacity
+                    # stage 1: only vaccinate health workers in 1 month
+                    if (self.vaccinated_pop / self.total_population) <= self.percent_health_workers:
+                        self.COVID_order_amount = 3 * self.percent_health_workers * self.total_population / (8 * 7 * 4)
+                        yield env.timeout(1)
+                    # stage 2: vaccinate at risk in 2 months
+                    elif (self.vaccinated_pop / self.total_population) <= (self.percent_health_workers + self.percent_at_risk):
+                        self.COVID_order_amount = 3 * self.percent_at_risk * self.total_population / (8 * 7 * 6)
+                        yield env.timeout(1)
+                    # stage 3: vaccinate adults in 3 months
+                    elif (self.vaccinated_pop / self.total_population) <= (self.percent_health_workers + self.percent_at_risk + self.percent_adults):
+                        self.COVID_order_amount = 3 * self.percent_adults * self.unvaccinated_pop / (8 * 7 * 30)
+                        yield env.timeout(1)
+                    # stage 4: vaccinate everyone whenever
+                    else:
+                        self.COVID_order_amount = 5
+                        yield env.timeout(1)
+             else:
+                yield env.timeout(1)
 
 # COVID vaccine recipe--------------------------------------------------------------------------------------------------
 def COVID_ingredients(env, name, vf):
@@ -446,7 +447,8 @@ def setup(env):
     while vf.unvaccinated_pop > 0:
         print('Vaccinated Pop:', vf.vaccinated_pop)
         yield env.timeout(random.randint(COVID_order_interval - 2, COVID_order_interval + 2))
-        i += vf.COVID_order_amount
+        i = vf.COVID_order_amount
+        print('COVID demand', vf.COVID_order_amount)
         env.process(COVID_ingredients(env, 'Covid #%d' % i, vf))
         env.process(COVID_assembler(env, 'Covid #%d' % i, vf))
         env.process(COVID_packager(env, 'Covid #%d' % i, vf))
@@ -461,9 +463,9 @@ def setup(env):
         
         """Change vf.Ingredient# to change what is plotted"""
         time.append(env.now/(work_days*work_hours))
-        # ingredients.append([vf.Ingredient1.level])
-        # ingredients.append(vf.vaccinated_pop)
-        dispatchs.append([vf.COVID_dispatch.level,vf.FLU_dispatch.level])
+        # ingredients.append([vf.Ingredient6.level])
+        ingredients.append(vf.vaccinated_pop)
+        # dispatchs.append([vf.COVID_dispatch.level])#,vf.FLU_dispatch.level])
         # dispatchs.append([vf.COVID_postAssembly_capacity.level,vf.FLU_postAssembly_capacity.level])
         
     print(env.now)
@@ -478,7 +480,7 @@ print('It took an average of %.2f for each COVID vaccine batch to be produced.' 
       +  np.mean(COVID_assembly_time_list) + np.mean(COVID_package_time_list)))
 print('It took an average of %.2f for each FLU vaccine batch to be produced.' % (np.mean(FLU_prep_time_list)
       +  np.mean(FLU_assembly_time_list) + np.mean(FLU_package_time_list)))
-# plt.plot(time,ingredients)
-plt.plot(time,dispatchs)
+plt.plot(time,ingredients)
+# plt.plot(time,dispatchs)
 # plt.gca().legend(['Ingredient 1','Ingredient 2','Ingredient 3','Ingredient 4','Ingredient 5','Ingredient 6','Ingredient 7','Ingredient 8','Ingredient 9','Ingredient 10'])
 plt.show()
