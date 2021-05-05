@@ -17,9 +17,10 @@ class ingredient:
 # CHANGE INFORMATION BELOW TO CUSTOMIZE SIMULATION----------------------------------------------------------------------
 
 # WORK DAY INFORMATION--------------------------------------------------------------------------------------------------
+years = 10
 work_days = 7
 work_hours = 8
-work_weeks = 52*10
+work_weeks = 52*years
 SIM_TIME = work_days * work_hours * work_weeks   # Total Work Time
 
 # RESOURCES------------------------------------------------------------------------------------------------------------
@@ -464,8 +465,8 @@ def setup(env):
         """Change vf.Ingredient# to change what is plotted"""
         time.append(env.now/(work_days*work_hours))
         # ingredients.append([vf.Ingredient6.level])
-        ingredients.append(vf.vaccinated_pop)
-        # dispatchs.append([vf.COVID_dispatch.level])#,vf.FLU_dispatch.level])
+        ingredients.append([vf.vaccinated_pop,vf.unvaccinated_pop])
+        dispatchs.append([vf.COVID_dispatch.level])#,vf.FLU_dispatch.level])
         # dispatchs.append([vf.COVID_postAssembly_capacity.level,vf.FLU_postAssembly_capacity.level])
         
     print(env.now)
@@ -480,7 +481,10 @@ print('It took an average of %.2f for each COVID vaccine batch to be produced.' 
       +  np.mean(COVID_assembly_time_list) + np.mean(COVID_package_time_list)))
 print('It took an average of %.2f for each FLU vaccine batch to be produced.' % (np.mean(FLU_prep_time_list)
       +  np.mean(FLU_assembly_time_list) + np.mean(FLU_package_time_list)))
+fig1=plt.figure(1)
 plt.plot(time,ingredients)
-# plt.plot(time,dispatchs)
+
+fig2=plt.figure(2)
+plt.plot(time,dispatchs)
 # plt.gca().legend(['Ingredient 1','Ingredient 2','Ingredient 3','Ingredient 4','Ingredient 5','Ingredient 6','Ingredient 7','Ingredient 8','Ingredient 9','Ingredient 10'])
 plt.show()
