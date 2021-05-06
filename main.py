@@ -17,7 +17,7 @@ class ingredient:
 # CHANGE INFORMATION BELOW TO CUSTOMIZE SIMULATION----------------------------------------------------------------------
 
 # WORK DAY INFORMATION--------------------------------------------------------------------------------------------------
-years = 1
+years = 2
 work_days = 7
 work_hours = 8
 work_weeks = 52*years
@@ -138,7 +138,7 @@ FLU_package_time_list = []
 
 class vaccineFacility(object):
     def __init__(self, env):
-        # Initialize everything lol
+        # Initialize everything
         self.worker = simpy.Resource(env, num_workers)
         self.machine1 = simpy.Resource(env, num_machines1)
         self.machine2 = simpy.Resource(env, num_machines2)
@@ -445,6 +445,11 @@ def setup(env):
         
     # Create initial demand
     for i in range(FLU_initial_order_numbers):
+        time.append(env.now/(work_days*work_hours))
+        ingredients1.append([vf.Ingredient1.level])
+        ingredients5.append([vf.Ingredient5.level])
+        populations.append([vf.vaccinated_pop,vf.unvaccinated_pop])
+        dispatchs.append([vf.COVID_dispatch.level,vf.FLU_dispatch.level])
         env.process(FLU_ingredients(env, 'Flu #%d' % i, vf))
         env.process(FLU_assembler(env, 'Flu #%d' % i, vf))
         env.process(FLU_packager(env, 'Flu #%d' % i, vf))
@@ -542,7 +547,5 @@ plt.xlabel('Time (Weeks)')
 plt.ylabel('Vaccines Produced')
 plt.title('Vaccine Production vs Time')
 plt.gca().legend(['COVID','FLU'])
-# plt.xlim([0,12])
-
 
 plt.show()
