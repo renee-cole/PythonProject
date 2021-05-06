@@ -25,10 +25,10 @@ SIM_TIME = work_days * work_hours * work_weeks   # Total Work Time
 
 # RESOURCES------------------------------------------------------------------------------------------------------------
 # Resources: resources: three different machines and generic technicians------------------------------------------------
-num_workers = 7000
-num_machines1 = 20000
-num_machines2 = 30000
-num_packaging_machines = 5000
+num_workers = 10
+num_machines1 = 10
+num_machines2 = 10
+num_packaging_machines = 10
 
 # Resources: containers-------------------------------------------------------------------------------------------------
 # Ingredient and their inital amounts and their raw store capacities and their costs------------------------------------
@@ -84,14 +84,14 @@ ingredient10_in_packaging = 40
 
 # PROCESSES-------------------------------------------------------------------------------------------------------------
 COVID_process1_time = 2
-COVID_process2_time = 2
+COVID_process2_time = 7
 COVID_process3_time = 2
-COVID_assembly_time = 2
-FLU_process1_time = 40
-FLU_process2_time = 40
-FLU_process3_time = 40
-FLU_assembly_time = 40
-Package_time = 2
+COVID_assembly_time = 25
+FLU_process1_time = 2
+FLU_process2_time = 1
+FLU_process3_time = 5
+FLU_assembly_time = 30
+Package_time = 10
 total_dispatch_capacity = 1000
 # TODO: These change with demand
 COVID_dispatch_capacity = total_dispatch_capacity / 2
@@ -115,7 +115,7 @@ COVID_order_interval = 3
 COVID_order_amount = 1
 COVID_initial_order_numbers = 0
 FLU_order_interval = 8
-FLU_order_amount = 1
+FLU_order_amount = 0.1
 FLU_initial_order_numbers = 1
 
 # POPULATION------------------------------------------------------------------------------------------------------------
@@ -210,7 +210,7 @@ class vaccineFacility(object):
         
         self.demand_control = env.process(self.demand_control(env))
         self.COVID_order_amount = COVID_order_amount
-        
+
     # Define each process-----------------------------------------------------------------------------------------------
     def COVID_process1(self):
         yield self.Ingredient1.get(ingredient1_in_COVIDprocess1)
@@ -342,6 +342,8 @@ class vaccineFacility(object):
                     # stage 4: vaccinate everyone whenever
                     else:
                         self.COVID_order_amount = 5
+                        self.FLU_order_amount = 1
+
                         yield env.timeout(1)
              else:
                 yield env.timeout(1)
@@ -425,12 +427,14 @@ def FLU_packager(env, name, vf):
         fin_time = env.now
         FLU_package_time_list.append(fin_time - init_time)
         
-#Creating empty lists used for plotting: time, populations, ingredients 1 and 5, as well as dispatch levels
-time=[]
+#Creating empty lists used for plotting: time, populations, ingredients 1 and 5, as well as dispatch levels     
+Ctime=[]
+Ftime = []
 populations=[]
 ingredients1=[]
 ingredients5=[]
-dispatchs=[]
+Cdispatchs=[]
+Fdispatchs=[]
 
 # Simulation Setup------------------------------------------------------------------------------------------------------
 def setup(env):
@@ -439,34 +443,35 @@ def setup(env):
     # Create the vaccine center
     vf = vaccineFacility(env)
     # # Create initial demand
-    for i in range(COVID_initial_order_numbers):
-        env.process(COVID_ingredients(env, 'Covid #%d' % i, vf))
-        env.process(COVID_assembler(env, 'Covid #%d' % i, vf))
-        env.process(COVID_packager(env, 'Covid #%d' % i, vf))
-        
-    # Create initial demand
     for i in range(FLU_initial_order_numbers):
         #Appending the lists used for plotting, since there is an initial demand for FLU this will capture our time 0 values
-        time.append(env.now/(work_days*work_hours))
+        Ctime.append(env.now/(work_days*work_hours))
+        Ftime.append(env.now/(work_days*work_hours))
         ingredients1.append([vf.Ingredient1.level])
         ingredients5.append([vf.Ingredient5.level])
         populations.append([vf.vaccinated_pop,vf.unvaccinated_pop])
-        dispatchs.append([vf.COVID_dispatch.level,vf.FLU_dispatch.level])
+        Cdispatchs.append([vf.COVID_dispatch.level])
+        Fdispatchs.append([vf.FLU_dispatch.level])
         env.process(FLU_ingredients(env, 'Flu #%d' % i, vf))
         env.process(FLU_assembler(env, 'Flu #%d' % i, vf))
         env.process(FLU_packager(env, 'Flu #%d' % i, vf))
-    
     # Create more orders while the simulation is running
     while vf.unvaccinated_pop > 0:
-        print('Vaccinated Pop:', vf.vaccinated_pop)
-        yield env.timeout(random.randint(COVID_order_interval - 2, COVID_order_interval + 2))
-        i = vf.COVID_order_amount
-        print('COVID demand', vf.COVID_order_amount)
-        env.process(COVID_ingredients(env, 'Covid #%d' % i, vf))
-        env.process(COVID_assembler(env, 'Covid #%d' % i, vf))
-        env.process(COVID_packager(env, 'Covid #%d' % i, vf))
-
-        yield env.timeout(random.randint(FLU_order_interval - 2, FLU_order_interval + 2))
+        init_time = env.now
+        while env.now-init_time < FLU_order_interval:
+            print('Vaccinated Pop:', vf.vaccinated_pop)
+            yield env.timeout(random.randint(COVID_order_interval - 2, COVID_order_interval + 2))
+            print('COVID demand', vf.COVID_order_amount)
+            env.process(COVID_ingredients(env, 'Covid #%d' % i, vf))
+            env.process(COVID_assembler(env, 'Covid #%d' % i, vf))
+            env.process(COVID_packager(env, 'Covid #%d' % i, vf))
+                
+            Ctime.append(env.now/(work_days*work_hours))
+            ingredients1.append([vf.Ingredient1.level])
+            populations.append([vf.vaccinated_pop,vf.unvaccinated_pop])
+            Cdispatchs.append([vf.COVID_dispatch.level])
+       
+        yield env.timeout(1)
         i = FLU_order_amount
         env.process(FLU_ingredients(env, 'Flu #%d' % i, vf))
         env.process(FLU_assembler(env, 'Flu #%d' % i, vf))
@@ -475,13 +480,10 @@ def setup(env):
         print('Total cost: ${0}'.format(vf.cost))
         
         #Once again appending the plotting lists, time will be displayed in lists so that calculation is needed
-        time.append(env.now/(work_days*work_hours))
-        ingredients1.append([vf.Ingredient1.level])
+        Ftime.append(env.now/(work_days*work_hours))
         ingredients5.append([vf.Ingredient5.level])
-        populations.append([vf.vaccinated_pop,vf.unvaccinated_pop])
-        dispatchs.append([vf.COVID_dispatch.level,vf.FLU_dispatch.level])
-        
-    print(env.now)
+        Fdispatchs.append([vf.FLU_dispatch.level])
+        print(env.now)
     
 # Run Simulation--------------------------------------------------------------------------------------------------------
 env = simpy.Environment()
@@ -502,14 +504,14 @@ else:
     
 #Figure 1 plots unvaccinated vs Vaccinated Population
 fig1=plt.figure(1)
-plt.plot(time,populations)
+plt.plot(Ctime,populations)
 plt.xlabel('Time (Weeks)')
 plt.gca().legend(['Vaccinated','Unvaccinated'])
 plt.title('Vaccinated and Unvaccinated Population vs Time')
 
 #Figure 2 plots the Dispatch Facility Level
 fig2=plt.figure(2)
-plt.plot(time,dispatchs)
+plt.plot(Ctime,Cdispatchs,Ftime,Fdispatchs)
 plt.xlabel('Time (Weeks)')
 plt.ylabel('Dispatch Facility Level')
 plt.title('Dispatch Level vs Time')
@@ -518,7 +520,7 @@ plt.xlim([0,shortplot])
 
 #Figure 3 plots Ingredient 1's Level
 fig3=plt.figure(3)
-plt.plot(time,ingredients1)
+plt.plot(Ctime,ingredients1)
 plt.xlabel('Time (Weeks)')
 plt.ylabel('Ingredient 1 Level')
 plt.title('Ingredient 1 Level vs Time')
@@ -526,32 +528,31 @@ plt.xlim([0,shortplot])
 
 #Figure 4 plots Ingredient 5's Level
 fig4=plt.figure(4)
-plt.plot(time,ingredients5)
+plt.plot(Ftime,ingredients5)
 plt.xlabel('Time (Weeks)')
 plt.ylabel('Ingredient 5 Level')
 plt.title('Ingredient 5 Level vs Time')
 plt.xlim([0,shortplot])
 
-#CProd is used to show the total number of COVID vaccines produced, it will sum up all the vaccines in dispatch up to that time
 CProd=[]
 temp=0
 count=0
-for i in dispatchs:
-    CProd.append(i[0]+temp)
+for i in Cdispatchs:
+    CProd.append(i[0] + temp)
     temp=CProd[count]
     count+=1
- #FProd is used to show the total number of Flu vaccines produced, it will sum up all the vaccines in dispatch up to that time   
+#FProd is used to show the total number of Flu vaccines produced, it will sum up all the vaccines in dispatch up to that time   
 FProd=[]
 temp=0
 count=0
-for i in dispatchs:
-    FProd.append(i[1]+temp)
+for i in Fdispatchs:
+    FProd.append(i[0]+temp)
     temp=FProd[count]
     count+=1
    
 #Figure 5 plots the number of COVID and Flu vaccines produced over time
 fig5=plt.figure(5)
-plt.plot(time,CProd,time,FProd)
+plt.plot(Ctime,CProd,Ftime,FProd)
 plt.xlabel('Time (Weeks)')
 plt.ylabel('Vaccines Produced')
 plt.title('Vaccine Production vs Time')
