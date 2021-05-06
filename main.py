@@ -423,7 +423,9 @@ def FLU_packager(env, name, vf):
         FLU_package_time_list.append(fin_time - init_time)
 
 time=[]
-ingredients=[]
+populations=[]
+ingredients1=[]
+ingredients5=[]
 dispatchs=[]
 
 # Simulation Setup------------------------------------------------------------------------------------------------------
@@ -464,10 +466,10 @@ def setup(env):
         
         """Change vf.Ingredient# to change what is plotted"""
         time.append(env.now/(work_days*work_hours))
-        # ingredients.append([vf.Ingredient6.level])
-        ingredients.append([vf.vaccinated_pop,vf.unvaccinated_pop])
-        dispatchs.append([vf.COVID_dispatch.level])#,vf.FLU_dispatch.level])
-        # dispatchs.append([vf.COVID_postAssembly_capacity.level,vf.FLU_postAssembly_capacity.level])
+        ingredients1.append([vf.Ingredient1.level])
+        ingredients5.append([vf.Ingredient5.level])
+        populations.append([vf.vaccinated_pop,vf.unvaccinated_pop])
+        dispatchs.append([vf.COVID_dispatch.level,vf.FLU_dispatch.level])
         
     print(env.now)
     
@@ -481,10 +483,63 @@ print('It took an average of %.2f for each COVID vaccine batch to be produced.' 
       +  np.mean(COVID_assembly_time_list) + np.mean(COVID_package_time_list)))
 print('It took an average of %.2f for each FLU vaccine batch to be produced.' % (np.mean(FLU_prep_time_list)
       +  np.mean(FLU_assembly_time_list) + np.mean(FLU_package_time_list)))
+
+if SIM_TIME>12*work_days*work_hours:
+    shortplot=12
+else:
+    shortplot=time[-1]
+    
 fig1=plt.figure(1)
-plt.plot(time,ingredients)
+plt.plot(time,populations)
+plt.xlabel('Time (Weeks)')
+plt.gca().legend(['Vaccinated','Unvaccinated'])
+plt.title('Vaccinated and Unvaccinated Population vs Time')
 
 fig2=plt.figure(2)
 plt.plot(time,dispatchs)
-# plt.gca().legend(['Ingredient 1','Ingredient 2','Ingredient 3','Ingredient 4','Ingredient 5','Ingredient 6','Ingredient 7','Ingredient 8','Ingredient 9','Ingredient 10'])
+plt.xlabel('Time (Weeks)')
+plt.ylabel('Dispatch Facility Level')
+plt.title('Dispatch Level vs Time')
+plt.gca().legend(['COVID','FLU'])
+plt.xlim([0,shortplot])
+
+fig3=plt.figure(3)
+plt.plot(time,ingredients1)
+plt.xlabel('Time (Weeks)')
+plt.ylabel('Ingredient 1 Level')
+plt.title('Ingredient 1 Level vs Time')
+plt.xlim([0,shortplot])
+
+fig4=plt.figure(4)
+plt.plot(time,ingredients5)
+plt.xlabel('Time (Weeks)')
+plt.ylabel('Ingredient 5 Level')
+plt.title('Ingredient 5 Level vs Time')
+plt.xlim([0,shortplot])
+
+CProd=[]
+temp=0
+count=0
+for i in dispatchs:
+    CProd.append(i[0]+temp)
+    temp=CProd[count]
+    count+=1
+    
+FProd=[]
+temp=0
+count=0
+for i in dispatchs:
+    FProd.append(i[1]+temp)
+    temp=FProd[count]
+    count+=1
+    
+fig5=plt.figure(5)
+plt.plot(time,CProd,time,FProd)
+plt.xlabel('Time (Weeks)')
+plt.ylabel('Vaccines Produced')
+plt.title('Vaccine Production vs Time')
+plt.gca().legend(['COVID','FLU'])
+# plt.xlim([0,12])
+
+
 plt.show()
