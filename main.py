@@ -17,7 +17,7 @@ class ingredient:
 # CHANGE INFORMATION BELOW TO CUSTOMIZE SIMULATION----------------------------------------------------------------------
 
 # WORK DAY INFORMATION--------------------------------------------------------------------------------------------------
-years = 10
+years = 1
 work_days = 7
 work_hours = 8
 work_weeks = 52*years
@@ -83,15 +83,15 @@ ingredient9_in_FLUassembly = 60
 ingredient10_in_packaging = 40
 
 # PROCESSES-------------------------------------------------------------------------------------------------------------
-COVID_process1_time = 20
-COVID_process2_time = 20
-COVID_process3_time = 20
-COVID_assembly_time = 20
+COVID_process1_time = 2
+COVID_process2_time = 2
+COVID_process3_time = 2
+COVID_assembly_time = 2
 FLU_process1_time = 40
 FLU_process2_time = 40
 FLU_process3_time = 40
 FLU_assembly_time = 40
-Package_time = 20
+Package_time = 2
 total_dispatch_capacity = 1000
 # TODO: These change with demand
 COVID_dispatch_capacity = total_dispatch_capacity / 2
@@ -114,12 +114,12 @@ CF2_critical_stock = 5 * ingredient10_in_packaging * work_hours / Package_time
 COVID_order_interval = 3
 COVID_order_amount = 1
 COVID_initial_order_numbers = 0
-FLU_order_interval = 3
+FLU_order_interval = 8
 FLU_order_amount = 1
-FLU_initial_order_numbers = 10
+FLU_initial_order_numbers = 1
 
 # POPULATION------------------------------------------------------------------------------------------------------------
-total_population = 50000
+total_population = 5000
 prop_antivaxxers = 0.1
 vaccinated_pop = 0
 unvaccinated_pop = total_population * (1 - prop_antivaxxers)
@@ -175,13 +175,16 @@ class vaccineFacility(object):
         self.COVID_postProcess2_capacity = simpy.Container(env, capacity=COVID_postProcess2_capacity, init=0)
         self.COVID_postProcess3_capacity = simpy.Container(env, capacity=COVID_postProcess3_capacity, init=0)
         self.COVID_postAssembly_capacity = simpy.Container(env, capacity=COVID_postAssembly_capacity, init=0)
-        self.COVID_dispatch = simpy.Container(env, capacity=COVID_dispatch_capacity, init=0)
+        self.COVID_dispatch_capacity = COVID_dispatch_capacity
+        self.COVID_dispatch = simpy.Container(env, capacity=self.COVID_dispatch_capacity, init=0)
+
 
         self.FLU_postProcess1_capacity = simpy.Container(env, capacity=FLU_postProcess1_capacity, init=0)
         self.FLU_postProcess2_capacity = simpy.Container(env, capacity=FLU_postProcess2_capacity, init=0)
         self.FLU_postProcess3_capacity = simpy.Container(env, capacity=FLU_postProcess3_capacity, init=0)
         self.FLU_postAssembly_capacity = simpy.Container(env, capacity=FLU_postAssembly_capacity, init=0)
-        self.FLU_dispatch = simpy.Container(env, capacity=FLU_dispatch_capacity, init=0)
+        self.FLU_dispatch_capacity = FLU_dispatch_capacity
+        self.FLU_dispatch = simpy.Container(env, capacity=self.FLU_dispatch_capacity, init=0)
 
         self.FLU_distribution = env.process(self.dispatch_control(env, self.FLU_dispatch, False))
         self.COVID_distribution = env.process(self.dispatch_control(env, self.COVID_dispatch, True))
@@ -231,7 +234,7 @@ class vaccineFacility(object):
         yield self.COVID_postProcess3_capacity.get(5)
         yield self.Ingredient9.get(ingredient9_in_COVIDassembly)
         yield self.env.timeout(random.randint(self.COVID_assembly_time - 1, self.COVID_assembly_time + 1))
-        yield self.COVID_postAssembly_capacity.put(8)
+        yield self.COVID_postAssembly_capacity.put(80)
 
     def FLU_process1(self):
         yield self.Ingredient5.get(ingredient5_in_FLUprocess1)
@@ -255,7 +258,7 @@ class vaccineFacility(object):
         yield self.FLU_postProcess3_capacity.get(5)
         yield self.Ingredient9.get(ingredient9_in_FLUassembly)
         yield self.env.timeout(random.randint(self.FLU_assembly_time - 1, self.FLU_assembly_time + 1))
-        yield self.FLU_postAssembly_capacity.put(10)
+        yield self.FLU_postAssembly_capacity.put(80)
 
     def packaging(self, C=True):
         if C is True:
@@ -277,7 +280,7 @@ class vaccineFacility(object):
                 print('{0} stock below critical level ({1}) at day {2}, hour {3}'.format(name, ingred.level,
                                                                                           int(env.now / 8),
                                                                                           env.now % 8))
-                print('calling', name, 'supplier')
+                print('Calling', name, 'supplier')
                 print('----------------------------------')
                 yield env.timeout(16)
                 print('{0} supplier arrives at day {1}, hour {2}'.format(name, int(env.now / 8), env.now % 8))
@@ -300,11 +303,11 @@ class vaccineFacility(object):
                 name='FLU'
             if vaccine.level >= 50:
                 print(
-                    'dispatch stock is {0}, calling distributor to pick up {1} vaccines at day {2}, hour {3}'.format(
+                    'Dispatch stock is {0}, calling distributor to pick up {1} vaccines at day {2}, hour {3}'.format(
                         vaccine.level, name, int(env.now / 8), env.now % 8))
                 print('----------------------------------')
                 yield env.timeout(4)
-                print('Distributed {0} vaccines at day {1}, hour {2}'.format(vaccine.level, int(env.now / 8),
+                print('Distributed {0} {1} vaccines at day {2}, hour {3}'.format(vaccine.level, name, int(env.now / 8),
                                                                              env.now % 8))
                 if C:
                     self.vaccinated_pop += vaccine.level
@@ -322,8 +325,8 @@ class vaccineFacility(object):
              if self.unvaccinated_pop > 0:
 
                     unvaccinated_percent = self.unvaccinated_pop / self.total_population * (1 - self.prop_antivaxxers)
-                    COVID_dispatch_capacity = total_dispatch_capacity * unvaccinated_percent
-                    FLU_dispatch_capacity = total_dispatch_capacity - COVID_dispatch_capacity
+                    self.COVID_dispatch_capacity = total_dispatch_capacity * unvaccinated_percent
+                    self.FLU_dispatch_capacity = total_dispatch_capacity - COVID_dispatch_capacity
                     # stage 1: only vaccinate health workers in 1 month
                     if (self.vaccinated_pop / self.total_population) <= self.percent_health_workers:
                         self.COVID_order_amount = 3 * self.percent_health_workers * self.total_population / (8 * 7 * 4)
@@ -457,7 +460,7 @@ def setup(env):
         env.process(COVID_packager(env, 'Covid #%d' % i, vf))
 
         yield env.timeout(random.randint(FLU_order_interval - 2, FLU_order_interval + 2))
-        i += FLU_order_amount
+        i = FLU_order_amount
         env.process(FLU_ingredients(env, 'Flu #%d' % i, vf))
         env.process(FLU_assembler(env, 'Flu #%d' % i, vf))
         env.process(FLU_packager(env, 'Flu #%d' % i, vf))
