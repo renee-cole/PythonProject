@@ -424,7 +424,8 @@ def FLU_packager(env, name, vf):
         print('FLU vaccines packaged:', vf.FLU_dispatch.level)
         fin_time = env.now
         FLU_package_time_list.append(fin_time - init_time)
-
+        
+#Creating empty lists used for plotting: time, populations, ingredients 1 and 5, as well as dispatch levels
 time=[]
 populations=[]
 ingredients1=[]
@@ -445,6 +446,7 @@ def setup(env):
         
     # Create initial demand
     for i in range(FLU_initial_order_numbers):
+        #Appending the lists used for plotting, since there is an initial demand for FLU this will capture our time 0 values
         time.append(env.now/(work_days*work_hours))
         ingredients1.append([vf.Ingredient1.level])
         ingredients5.append([vf.Ingredient5.level])
@@ -472,7 +474,7 @@ def setup(env):
         
         print('Total cost: ${0}'.format(vf.cost))
         
-        """Change vf.Ingredient# to change what is plotted"""
+        #Once again appending the plotting lists, time will be displayed in lists so that calculation is needed
         time.append(env.now/(work_days*work_hours))
         ingredients1.append([vf.Ingredient1.level])
         ingredients5.append([vf.Ingredient5.level])
@@ -492,17 +494,20 @@ print('It took an average of %.2f for each COVID vaccine batch to be produced.' 
 print('It took an average of %.2f for each FLU vaccine batch to be produced.' % (np.mean(FLU_prep_time_list)
       +  np.mean(FLU_assembly_time_list) + np.mean(FLU_package_time_list)))
 
+#The more dense plots will be run for only 12 weeks (3 months) so shortplot is a fail safe in case the sim is run for less than that
 if SIM_TIME>12*work_days*work_hours:
     shortplot=12
 else:
     shortplot=time[-1]
     
+#Figure 1 plots unvaccinated vs Vaccinated Population
 fig1=plt.figure(1)
 plt.plot(time,populations)
 plt.xlabel('Time (Weeks)')
 plt.gca().legend(['Vaccinated','Unvaccinated'])
 plt.title('Vaccinated and Unvaccinated Population vs Time')
 
+#Figure 2 plots the Dispatch Facility Level
 fig2=plt.figure(2)
 plt.plot(time,dispatchs)
 plt.xlabel('Time (Weeks)')
@@ -511,6 +516,7 @@ plt.title('Dispatch Level vs Time')
 plt.gca().legend(['COVID','FLU'])
 plt.xlim([0,shortplot])
 
+#Figure 3 plots Ingredient 1's Level
 fig3=plt.figure(3)
 plt.plot(time,ingredients1)
 plt.xlabel('Time (Weeks)')
@@ -518,6 +524,7 @@ plt.ylabel('Ingredient 1 Level')
 plt.title('Ingredient 1 Level vs Time')
 plt.xlim([0,shortplot])
 
+#Figure 4 plots Ingredient 5's Level
 fig4=plt.figure(4)
 plt.plot(time,ingredients5)
 plt.xlabel('Time (Weeks)')
@@ -525,6 +532,7 @@ plt.ylabel('Ingredient 5 Level')
 plt.title('Ingredient 5 Level vs Time')
 plt.xlim([0,shortplot])
 
+#CProd is used to show the total number of COVID vaccines produced, it will sum up all the vaccines in dispatch up to that time
 CProd=[]
 temp=0
 count=0
@@ -532,7 +540,7 @@ for i in dispatchs:
     CProd.append(i[0]+temp)
     temp=CProd[count]
     count+=1
-    
+ #FProd is used to show the total number of Flu vaccines produced, it will sum up all the vaccines in dispatch up to that time   
 FProd=[]
 temp=0
 count=0
@@ -540,7 +548,8 @@ for i in dispatchs:
     FProd.append(i[1]+temp)
     temp=FProd[count]
     count+=1
-    
+   
+#Figure 5 plots the number of COVID and Flu vaccines produced over time
 fig5=plt.figure(5)
 plt.plot(time,CProd,time,FProd)
 plt.xlabel('Time (Weeks)')
@@ -548,4 +557,5 @@ plt.ylabel('Vaccines Produced')
 plt.title('Vaccine Production vs Time')
 plt.gca().legend(['COVID','FLU'])
 
+#To show the plots
 plt.show()
